@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "title": "Inception",
+    "category": "Science Fiction",
+    "release_year": 2010,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/qmDpIHrmpJINaRKAfWQfftjCdyi.jpg"
+  },
+  {
+    "id": 2,
+    "title": "The Dark Knight",
+    "category": "Action",
+    "release_year": 2008,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+  },
+  {
+    "id": 3,
+    "title": "Parasite",
+    "category": "Drama",
+    "release_year": 2019,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"
+  },
+  {
+    "id": 4,
+    "title": "Interstellar",
+    "category": "Science Fiction",
+    "release_year": 2014,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg"
+  },
+  {
+    "id": 5,
+    "title": "La La Land",
+    "category": "Romance",
+    "release_year": 2016,
+    "status": "To Watch",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg"
+  },
+  {
+    "id": 6,
+    "title": "Avengers: Endgame",
+    "category": "Action",
+    "release_year": 2019,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
+  },
+  {
+    "id": 7,
+    "title": "Joker",
+    "category": "Thriller",
+    "release_year": 2019,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg"
+  },
+  {
+    "id": 8,
+    "title": "Spirited Away",
+    "category": "Animation",
+    "release_year": 2001,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/oRvMaJOmapypFUcQqpgHMZA6qL9.jpg"
+  },
+  {
+    "id": 9,
+    "title": "The Godfather",
+    "category": "Crime",
+    "release_year": 1972,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"
+  },
+  {
+    "id": 10,
+    "title": "Everything Everywhere All at Once",
+    "category": "Adventure",
+    "release_year": 2022,
+    "status": "To Watch",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg"
+  }
+]

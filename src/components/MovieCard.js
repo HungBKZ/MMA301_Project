@@ -1,0 +1,124 @@
+import React from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../styles/commonStyles";
+
+const MovieCard = ({ movie, onPress, onDelete }) => {
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.cardContent}>
+        {/* Poster Image */}
+        {movie.poster_uri ? (
+          <Image source={{ uri: movie.poster_uri }} style={styles.poster} />
+        ) : (
+          <View style={[styles.poster, styles.placeholderPoster]}>
+            <Ionicons name="film-outline" size={40} color={colors.textSecondary} />
+          </View>
+        )}
+
+        {/* Movie Info */}
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={2}>
+            {movie.title}
+          </Text>
+          <Text style={styles.category}>{movie.category}</Text>
+          <Text style={styles.year}>Year: {movie.release_year}</Text>
+          <View style={[styles.statusBadge, getStatusStyle(movie.status)]}>
+            <Text style={styles.statusText}>{movie.status}</Text>
+          </View>
+        </View>
+
+        {/* Delete Button */}
+        {onDelete && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(movie.id)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="trash-outline" size={24} color={colors.error} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const getStatusStyle = (status) => {
+  switch (status) {
+    case "Watched":
+      return { backgroundColor: "#4CAF50" };
+    case "Watching":
+      return { backgroundColor: "#2196F3" };
+    case "Favorite":
+      return { backgroundColor: "#FF9800" };
+    default:
+      return { backgroundColor: "#9E9E9E" };
+  }
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardContent: {
+    flexDirection: "row",
+    padding: 12,
+  },
+  poster: {
+    width: 80,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: colors.border,
+  },
+  placeholderPoster: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  info: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: colors.text,
+    marginBottom: 4,
+  },
+  category: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  year: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 8,
+  },
+});
+
+export default MovieCard;
