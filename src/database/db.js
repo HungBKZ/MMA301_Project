@@ -5,20 +5,19 @@
 // Làm theo từng TODO. Ước lượng thời gian: 15–25 phút (Core), +15 phút (Advanced)
 
 import * as SQLite from "expo-sqlite";
+import * as SecureStore from "expo-secure-store"; // Dùng để import trong authService
 
 // ============================================
 // STEP 0: Open database connection
 // ============================================
-// TODO 0: Khởi tạo kết nối DB
 const db = SQLite.openDatabaseSync("moviesApp.db");
 
 // ============================================
-// STEP 1: Initialize Database (Create Table)
+// STEP 1: Initialize Database (Create Tables)
 // ============================================
-// Bảng: movies(id, title, category, release_year, status, poster_uri)
 export const initDatabase = () => {
   try {
-    // TODO 1.1: Viết câu lệnh CREATE TABLE đầy đủ
+    // 1. Bảng MOVIES
     db.execSync(`
       CREATE TABLE IF NOT EXISTS movies (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +28,25 @@ export const initDatabase = () => {
         poster_uri TEXT
       );
     `);
-    console.log("✅ Database initialized successfully");
+
+    // 2. Bảng account (SỬ DỤNG PASSWORD PLAIN TEXT - THEO YÊU CẦU)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS account (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT,             
+        name TEXT,
+        avatar_uri TEXT,
+        role TEXT DEFAULT 'User', 
+        oauth_provider TEXT,
+        oauth_id TEXT,
+        oauth_profile TEXT,
+        created_at DATETIME DEFAULT (datetime('now'))
+      );
+    `);
+
+    console.log("✅ Database initialized successfully (including account table)");
+    seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
   } catch (error) {
     console.error("❌ Error initializing database:", error);
   }
@@ -323,6 +340,111 @@ export const deleteAllMovies = () => {
     return false;
   }
 };
+
+
+// ============================================
+// ACCOUNT HELPER FUNCTIONS (No hashing)
+// ============================================
+
+export const addUser = (email, password, name, avatar_uri, role = "user") => {
+  try {
+    const result = db.runSync(
+      "INSERT INTO account (email, password, name, avatar_uri, role) VALUES (?, ?, ?, ?, ?)",
+      [email, password, name, avatar_uri, role]
+    );
+    return { success: true, id: result.lastInsertRowId };
+  } catch (error) {
+    console.error("❌ Error addUser:", error);
+    return { success: false, error };
+  }
+};
+
+export const getUserByEmail = (email) => {
+  try {
+    const user = db.getFirstSync("SELECT * FROM account WHERE email = ?", [email]);
+    return user || null;
+  } catch (error) {
+    console.error("❌ Error getUserByEmail:", error);
+    return null;
+  }
+};
+
+export const getUserById = (id) => {
+  try {
+    const user = db.getFirstSync("SELECT * FROM account WHERE id = ?", [id]);
+    return user || null;
+  } catch (error) {
+    console.error("❌ Error getUserById:", error);
+    return null;
+  }
+};
+
+export const updateUserProfile = (id, { name, avatar_uri, email }) => {
+  try {
+    // COALESCE(?, column_name) cho phép truyền null để giữ nguyên giá trị cũ
+    db.runSync(
+      "UPDATE account SET name = COALESCE(?, name), avatar_uri = COALESCE(?, avatar_uri), email = COALESCE(?, email) WHERE id = ?",
+      [name, avatar_uri, email, id]
+    );
+    return true;
+  } catch (error) {
+    console.error("❌ Error updateUserProfile:", error);
+    return false;
+  }
+};
+
+// Cập nhật mật khẩu (plain text)
+export const updateUserPassword = (id, newPassword) => {
+  try {
+    db.runSync("UPDATE account SET password = ? WHERE id = ?", [newPassword, id]);
+    return true;
+  } catch (error) {
+    console.error("❌ Error updateUserPassword:", error);
+    return false;
+  }
+};
+
+// Tạo/cập nhật user OAuth
+export const upsertOAuthUser = (provider, oauthId, email, name = null, avatarUri = null) => {
+  try {
+    // 1. Tìm theo OAuth ID
+    let existing = db.getFirstSync(
+      "SELECT * FROM account WHERE oauth_provider = ? AND oauth_id = ?",
+      [provider, oauthId]
+    );
+    let created = false;
+
+    if (existing) {
+      // Update
+      db.runSync(
+        "UPDATE account SET name = COALESCE(?, name), avatar_uri = COALESCE(?, avatar_uri) WHERE id = ?",
+        [name, avatarUri, existing.id]
+      );
+      return { success: true, id: existing.id, created: false };
+    } 
+    
+    // 2. Nếu chưa có, tạo mới
+    const result = db.runSync(
+      "INSERT INTO account (email, password, name, avatar_uri, role, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [email, null, name, avatarUri, "User", provider, oauthId]
+    );
+    return { success: true, id: result.lastInsertRowId, created: true };
+    
+  } catch (error) {
+    console.error("❌ Error upsertOAuthUser:", error);
+    return { success: false, error };
+  }
+};
+
+export const seedAdminAccount = () => {
+  const adminEmail = "admin@admin.com";
+  const admin = getUserByEmail(adminEmail);
+  if (!admin) {
+    addUser(adminEmail, "admin123", "Super Admin", null, "admin"); // Mật khẩu plain text
+    console.log("✅ Admin account seeded: admin@admin.com / admin123");
+  }
+};
+
 
 // ============================================
 // STEP 5: Auto-init on import
