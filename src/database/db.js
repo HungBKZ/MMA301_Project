@@ -146,8 +146,8 @@ export const searchMovies = (searchQuery) => {
   }
 };
 
-// 2.8 Filter by year and/or status (dynamic WHERE)
-export const filterMovies = (year = null, status = null) => {
+// 2.8 Filter by year and/or status and/or category (dynamic WHERE)
+export const filterMovies = (year = null, status = null, category = null) => {
   try {
     let query = "SELECT * FROM movies WHERE 1=1";
     const params = [];
@@ -158,6 +158,10 @@ export const filterMovies = (year = null, status = null) => {
     if (status) {
       query += " AND status = ?";
       params.push(status);
+    }
+    if (category) {
+      query += " AND category = ?";
+      params.push(category);
     }
     query += " ORDER BY release_year DESC";
     const results = db.getAllSync(query, params);
@@ -171,6 +175,21 @@ export const filterMovies = (year = null, status = null) => {
 // ============================================
 // STEP 3: Reports & Stats (Advanced)
 // ============================================
+
+// 3.0 Get all unique categories (for filter dropdown)
+export const getAllCategories = () => {
+  try {
+    const results = db.getAllSync(`
+      SELECT DISTINCT category
+      FROM movies
+      ORDER BY category ASC
+    `);
+    return results.map(row => row.category);
+  } catch (error) {
+    console.error("❌ Error getAllCategories:", error);
+    return [];
+  }
+};
 
 // 3.1 Count movies by category (GROUP BY)
 export const getMovieCountByCategory = () => {

@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import { searchMovies, filterMovies } from "../database/db";
+import { searchMovies, filterMovies, getAllCategories } from "../database/db";
 import { colors, commonStyles } from "../styles/commonStyles";
+import { useFocusEffect } from "@react-navigation/native";
 
 /**
  * SearchScreen - Task 4: Search & Filter Movies
@@ -21,38 +22,78 @@ const SearchScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterYear, setFilterYear] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
   const [results, setResults] = useState([]);
   const [searchMode, setSearchMode] = useState("search"); // 'search' or 'filter'
+  const [isSearched, setIsSearched] = useState(false); // Track if user has searched
+  const [categories, setCategories] = useState([]);
 
   const statuses = ["", "To Watch", "Watched", "Favorite"];
 
+  // Load categories when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadedCategories = getAllCategories();
+      setCategories(loadedCategories);
+      console.log("📚 Loaded categories:", loadedCategories);
+    }, [])
+  );
+
   /** Thực hiện tìm kiếm theo title hoặc category */
   const handleSearch = () => {
-    if (searchQuery.trim()) {
-      const searchResults = searchMovies(searchQuery);
-      setResults(searchResults);
-      setSearchMode("search");
+    console.log("🔍 Searching for:", searchQuery);
+    
+    if (!searchQuery.trim()) {
+      console.log("⚠️ Search query is empty");
+      alert("Please enter a search term");
+      return;
     }
+
+    const searchResults = searchMovies(searchQuery);
+    console.log("✅ Search results:", searchResults.length, "movies found");
+    setResults(searchResults);
+    setSearchMode("search");
+    setIsSearched(true);
   };
 
-  /** Lọc theo năm phát hành và/hoặc trạng thái */
+  /** Lọc theo năm phát hành và/hoặc trạng thái và/hoặc thể loại */
   const handleFilter = () => {
     const year = filterYear ? parseInt(filterYear) : null;
     const status = filterStatus || null;
-    if (year || status) {
-      const filterResults = filterMovies(year, status);
-      setResults(filterResults);
-      setSearchMode("filter");
+    const category = filterCategory || null;
+    
+    console.log("🔍 Filtering - Year:", year, "Status:", status, "Category:", category);
+
+    if (!year && !status && !category) {
+      console.log("⚠️ No filter criteria selected");
+      alert("Please select at least one filter criteria (Year, Status, or Category)");
+      return;
     }
+
+    // Validate year
+    if (year && (isNaN(year) || year < 1900 || year > 2100)) {
+      console.log("⚠️ Invalid year:", filterYear);
+      alert("Please enter a valid year (1900-2100)");
+      return;
+    }
+
+    const filterResults = filterMovies(year, status, category);
+    console.log("✅ Filter results:", filterResults.length, "movies found");
+    setResults(filterResults);
+    setSearchMode("filter");
+    setIsSearched(true);
   };
 
   /** Reset tất cả */
   const handleReset = () => {
+    console.log("🔄 Resetting all filters");
     setSearchQuery("");
     setFilterYear("");
     setFilterStatus("");
+    setFilterCategory("");
     setResults([]);
     setSearchMode("search");
+    setIsSearched(false);
   };
 
   /** Render từng movie */
@@ -84,16 +125,46 @@ const SearchScreen = ({ navigation }) => {
   };
 
   /** Khi không có kết quả */
-  const renderEmptyList = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="search-outline" size={80} color={colors.textSecondary} />
-      <Text style={styles.emptyText}>
-        {searchMode === "search"
-          ? "No movies found\nTry different keywords"
-          : "No movies match your filters\nTry different criteria"}
-      </Text>
-    </View>
-  );
+  const renderEmptyList = () => {
+    // Nếu chưa tìm kiếm gì, hiển thị hướng dẫn
+    if (!isSearched) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search" size={80} color={colors.accent} />
+          <Text style={styles.emptyTitle}>Search & Filter Movies</Text>
+          <Text style={styles.emptyText}>
+            Use the search bar above to find movies by title or category,{"\n"}
+            or use filters to narrow down by year and status.
+          </Text>
+        </View>
+      );
+    }
+
+    // Khi đã tìm nhưng không có kết quả
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="sad-outline" size={80} color={colors.textSecondary} />
+        <Text style={styles.emptyTitle}>No Results Found</Text>
+        <Text style={styles.emptyText}>
+          {searchMode === "search"
+            ? `No movies found for "${searchQuery}"\nTry different keywords`
+            : `No movies match your filters\n${[
+                filterYear && `Year: ${filterYear}`,
+                filterCategory && `Category: ${filterCategory}`,
+                filterStatus && `Status: ${filterStatus}`
+              ].filter(Boolean).join(" • ")}`}
+        </Text>
+        <TouchableOpacity 
+          style={styles.resetHintButton}
+          onPress={handleReset}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="refresh" size={20} color={colors.primary} />
+          <Text style={styles.resetHintText}>Clear and try again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={commonStyles.container}>
@@ -102,14 +173,27 @@ const SearchScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Search by Title or Category</Text>
           <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Enter movie title or category..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-            />
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search-outline" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Enter movie title or category..."
+                placeholderTextColor={colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery("")}
+                  style={styles.clearButton}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
             <TouchableOpacity
               style={styles.searchButton}
               onPress={handleSearch}
@@ -135,6 +219,24 @@ const SearchScreen = ({ navigation }) => {
               onChangeText={setFilterYear}
               keyboardType="numeric"
             />
+          </View>
+
+          {/* Category Filter */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Category</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={filterCategory}
+                onValueChange={(itemValue) => setFilterCategory(itemValue)}
+                style={styles.picker}
+                dropdownIconColor={colors.textPrimary}
+              >
+                <Picker.Item label="All Categories" value="" />
+                {categories.map((category) => (
+                  <Picker.Item key={category} label={category} value={category} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
           {/* Status Filter */}
@@ -192,9 +294,7 @@ const SearchScreen = ({ navigation }) => {
         data={results}
         renderItem={renderMovieItem}
         keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={
-          (searchQuery || filterYear || filterStatus) && renderEmptyList()
-        }
+        ListEmptyComponent={renderEmptyList}
         style={styles.resultsList}
         contentContainerStyle={
           results.length === 0 && styles.emptyListContainer
@@ -222,16 +322,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  searchInput: {
+  searchInputWrapper: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
+    marginRight: 8,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
     padding: 12,
     fontSize: 16,
     color: colors.textPrimary,
-    marginRight: 8,
+  },
+  clearButton: {
+    padding: 4,
   },
   searchButton: {
     backgroundColor: colors.primary,
@@ -334,13 +446,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 32,
   },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: colors.textPrimary,
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 8,
+  },
   emptyText: {
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: "center",
-    marginTop: 16,
+    lineHeight: 24,
   },
   emptyListContainer: { flexGrow: 1 },
+  resetHintButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  resetHintText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
 });
 
 export default SearchScreen;

@@ -1,0 +1,37 @@
+[
+  {
+    "title": "The Matrix",
+    "category": "Science Fiction",
+    "release_year": 1999,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg"
+  },
+  {
+    "title": "Interstellar",
+    "category": "Science Fiction",
+    "release_year": 2014,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg"
+  },
+  {
+    "title": "The Godfather",
+    "category": "Drama",
+    "release_year": 1972,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"
+  },
+  {
+    "title": "Pulp Fiction",
+    "category": "Crime",
+    "release_year": 1994,
+    "status": "Watched",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg"
+  },
+  {
+    "title": "The Dark Knight",
+    "category": "Action",
+    "release_year": 2008,
+    "status": "Favorite",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+  }
+]

@@ -34,9 +34,19 @@ function HomeStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
       }}
     >
       <Stack.Screen
@@ -44,8 +54,6 @@ function HomeStack() {
         component={HomeScreen}
         options={{
           title: "Movie Manager",
-          headerStyle: { backgroundColor: colors.primary },
-          headerTintColor: "#fff",
         }}
       />
       <Stack.Screen
@@ -66,16 +74,63 @@ function HomeStack() {
 }
 
 /**
- * 📊 Reports Stack Navigator
+ * � Search Stack Navigator
+ * Gồm: Search + Movie Detail
+ */
+function SearchStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="SearchMain"
+        component={SearchScreen}
+        options={{ title: "Search & Filter" }}
+      />
+      <Stack.Screen
+        name="Detail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * �📊 Reports Stack Navigator
  * Gồm: Category Report + Favorite Years Report
  */
 function ReportsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primary },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
       }}
     >
       <Stack.Screen
@@ -98,7 +153,7 @@ function ReportsStack() {
 export default function App() {
   return (
     <NavigationContainer>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       {/* 🧭 Bottom Tab Navigation */}
       <Tab.Navigator
@@ -126,7 +181,7 @@ export default function App() {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: colors.accent,
+          tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textSecondary,
           tabBarStyle: {
             backgroundColor: colors.surface,
@@ -134,6 +189,11 @@ export default function App() {
             paddingBottom: 5,
             paddingTop: 5,
             height: 60,
+            elevation: 8,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
           },
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
           headerShown: false,
@@ -146,14 +206,8 @@ export default function App() {
         />
         <Tab.Screen
           name="Search"
-          component={SearchScreen}
-          options={{
-            title: "Search",
-            headerShown: true,
-            headerStyle: { backgroundColor: colors.primary },
-            headerTintColor: "#fff",
-            headerTitleStyle: { fontWeight: "bold" },
-          }}
+          component={SearchStack}
+          options={{ title: "Search" }}
         />
         <Tab.Screen
           name="Reports"
@@ -166,9 +220,16 @@ export default function App() {
           options={{
             title: "Dashboard",
             headerShown: true,
-            headerStyle: { backgroundColor: colors.primary },
-            headerTintColor: "#fff",
-            headerTitleStyle: { fontWeight: "bold" },
+            headerStyle: { 
+              backgroundColor: colors.surface,
+              elevation: 4,
+              shadowColor: colors.primary,
+            },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: colors.textPrimary,
+            },
           }}
         />
         <Tab.Screen
@@ -177,9 +238,16 @@ export default function App() {
           options={{
             title: "Data",
             headerShown: true,
-            headerStyle: { backgroundColor: colors.primary },
-            headerTintColor: "#fff",
-            headerTitleStyle: { fontWeight: "bold" },
+            headerStyle: { 
+              backgroundColor: colors.surface,
+              elevation: 4,
+              shadowColor: colors.primary,
+            },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: colors.textPrimary,
+            },
           }}
         />
       </Tab.Navigator>

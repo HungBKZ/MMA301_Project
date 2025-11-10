@@ -1,25 +1,26 @@
 import { StyleSheet } from "react-native";
 
-// 🎨 Bảng màu chủ đạo
+// 🎨 Bảng màu chủ đạo - Light Pastel Theme
 export const colors = {
-  primary: "#E50914", // Netflix Red
-  primaryDark: "#B20710",
-  accent: "#FFD700", // Gold
-  background: "#141414",
-  surface: "#1F1F1F",
-  error: "#B00020",
-  success: "#4CAF50",
-  warning: "#FF9800",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#B3B3B3",
-  border: "#333333",
-
-  // Trạng thái riêng cho Movie App
-  watched: "#4CAF50",
-  toWatch: "#2196F3",
-  favorite: "#FFD700",
-  wishlist: "#FF4081", // (thêm nếu dùng cho Shopping App)
-  purchased: "#4CAF50",
+  primary: "#6B9BD1", // Pastel Blue
+  primaryDark: "#5A89BF",
+  primaryLight: "#E8F1FB", // Very light blue
+  accent: "#FFB347", // Pastel Orange
+  background: "#F8FAFC", // Off-white with slight blue tint
+  surface: "#FFFFFF", // Pure white for cards
+  error: "#FF8A80", // Pastel Red
+  success: "#81C784", // Pastel Green
+  warning: "#FFD54F", // Pastel Yellow
+  textPrimary: "#2C3E50", // Dark blue-gray for text
+  textSecondary: "#64748B", // Medium gray-blue
+  border: "#E2E8F0", // Light gray-blue border
+  
+  // Trạng thái riêng cho Movie App - Pastel versions
+  watched: "#81C784", // Pastel Green
+  toWatch: "#90CAF9", // Pastel Blue
+  favorite: "#FFD54F", // Pastel Gold/Yellow
+  wishlist: "#F48FB1", // Pastel Pink
+  purchased: "#81C784", // Pastel Green
 };
 
 // 🌐 Style dùng chung cho toàn app
@@ -35,11 +36,13 @@ export const commonStyles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
-    elevation: 3,
-    shadowColor: "#000",
+    elevation: 2,
+    shadowColor: "#6B9BD1",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 
   button: {
@@ -90,7 +93,7 @@ export const commonStyles = StyleSheet.create({
   },
 
   statusText: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 12,
     fontWeight: "600",
   },
