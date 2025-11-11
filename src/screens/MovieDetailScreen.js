@@ -33,6 +33,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editYear, setEditYear] = useState("");
+  const [editDuration, setEditDuration] = useState("120");
   const [editStatus, setEditStatus] = useState("");
   const [editPosterUri, setEditPosterUri] = useState(null);
 
@@ -61,6 +62,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
       setEditTitle(movieData.title);
       setEditCategory(movieData.category);
       setEditYear(movieData.release_year.toString());
+      setEditDuration((movieData.duration_minutes || 120).toString());
       setEditStatus(movieData.status);
       setEditPosterUri(movieData.poster_uri);
     } else {
@@ -113,11 +115,13 @@ const MovieDetailScreen = ({ route, navigation }) => {
       Alert.alert("Error", "Invalid release year");
       return;
     }
+    const duration = parseInt(editDuration) || 120;
     const success = updateMovie(
       movieId,
       editTitle.trim(),
       editCategory,
       year,
+      duration,
       editStatus,
       editPosterUri
     );
@@ -127,6 +131,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
         title: editTitle.trim(),
         category: editCategory,
         release_year: year,
+        duration_minutes: duration,
         status: editStatus,
         poster_uri: editPosterUri,
       });
@@ -172,11 +177,11 @@ const MovieDetailScreen = ({ route, navigation }) => {
   }
 
   const statusColor =
-    movie.status === "Watched"
-      ? colors.watched
-      : movie.status === "Favorite"
-      ? colors.favorite
-      : colors.toWatch;
+    movie.status === "SHOWING"
+      ? "#4CAF50" // Green for showing
+      : movie.status === "ENDED"
+      ? "#9E9E9E" // Gray for ended
+      : "#2196F3"; // Blue for coming soon
 
   return (
     <ScrollView style={commonStyles.container}>
@@ -308,6 +313,30 @@ const MovieDetailScreen = ({ route, navigation }) => {
             )}
           </View>
 
+          {/* Duration */}
+          <View style={styles.detailRow}>
+            <View style={styles.detailLabel}>
+              <Ionicons
+                name="time"
+                size={20}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.labelText}>Duration</Text>
+            </View>
+            {isEditing ? (
+              <TextInput
+                style={styles.yearInput}
+                value={editDuration}
+                onChangeText={setEditDuration}
+                keyboardType="numeric"
+                maxLength={3}
+                placeholder="120"
+              />
+            ) : (
+              <Text style={styles.valueText}>{movie.duration_minutes || 120} mins</Text>
+            )}
+          </View>
+
           {/* Status */}
           <View style={styles.detailRow}>
             <View style={styles.detailLabel}>
@@ -322,9 +351,9 @@ const MovieDetailScreen = ({ route, navigation }) => {
                   style={styles.picker}
                   dropdownIconColor={colors.textPrimary}
                 >
-                  <Picker.Item label="To Watch" value="To Watch" />
-                  <Picker.Item label="Watched" value="Watched" />
-                  <Picker.Item label="Favorite" value="Favorite" />
+                  <Picker.Item label="Coming Soon" value="COMING_SOON" />
+                  <Picker.Item label="Showing" value="SHOWING" />
+                  <Picker.Item label="Ended" value="ENDED" />
                 </Picker>
               </View>
             ) : (
