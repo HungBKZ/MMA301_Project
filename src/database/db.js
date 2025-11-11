@@ -126,7 +126,6 @@ export const initDatabase = () => {
         movie_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
         created_at DATETIME DEFAULT (datetime('now')),
         FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
@@ -681,7 +680,7 @@ export const getCollectionMovies = (collectionId) => {
 export const addReview = (movieId, userId, content) => {
   try {
     const result = db.runSync(
-      "INSERT INTO reviews (movie_id, user_id, content, status) VALUES (?, ?, ?, 'pending')",
+      "INSERT INTO reviews (movie_id, user_id, content) VALUES (?, ?, ?)",
       [movieId, userId, content.trim()]
     );
     return { success: true, id: result.lastInsertRowId };
@@ -691,17 +690,14 @@ export const addReview = (movieId, userId, content) => {
   }
 };
 
-export const getReviewsByMovie = (movieId, includePending = false) => {
+export const getReviewsByMovie = (movieId) => {
   try {
-    if (includePending) {
-      return db.getAllSync(
-        "SELECT * FROM reviews WHERE movie_id = ? ORDER BY created_at DESC",
-        [movieId]
-      );
-    }
     return db.getAllSync(
-      "SELECT * FROM reviews WHERE movie_id = ? AND status = 'approved' ORDER BY created_at DESC",
-      [movieId]
+      `SELECT r.*, a.name, a.avatar_uri
+        FROM reviews r 
+        LEFT JOIN account a ON r.user_id = a.id 
+        WHERE r.movie_id = ? 
+        ORDER BY r.created_at DESC`, [movieId]
     );
   } catch (error) {
     console.error("❌ Error getReviewsByMovie:", error);
@@ -709,41 +705,44 @@ export const getReviewsByMovie = (movieId, includePending = false) => {
   }
 };
 
-export const listPendingOrReportedReviews = () => {
+export const getUserReviewByUserId = (userId, movieId) => {
   try {
-    return db.getAllSync(
-      `SELECT r.*, m.title AS movie_title, a.email AS user_email
-       FROM reviews r
-       JOIN movies m ON m.id = r.movie_id
-       JOIN account a ON a.id = r.user_id
-       WHERE r.status = 'pending'
-       ORDER BY r.created_at DESC`
+    return db.getFirstSync(
+      `SELECT r.*, a.name, a.avatar_uri
+       FROM reviews r 
+       LEFT JOIN account a ON r.user_id = a.id 
+       WHERE r.user_id = ? AND r.movie_id = ?`,
+      [userId, movieId]
     );
   } catch (error) {
-    console.error("❌ Error listPendingOrReportedReviews:", error);
-    return [];
+    console.error("❌ Error getUserReviewForMovie:", error);
+    return null;
   }
 };
 
-export const approveReview = (reviewId) => {
+export const deleteReview = (reviewId) => {
   try {
-    const res = db.runSync("UPDATE reviews SET status = 'approved' WHERE id = ?", [reviewId]);
-    return res.changes > 0;
+    db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
+    return { success: true };
   } catch (error) {
-    console.error("❌ Error approveReview:", error);
-    return false;
+    console.error("❌ Error deleteReview:", error);
+    return { success: false, error };
   }
 };
 
-export const deleteReviewById = (reviewId) => {
+export const updateReview = (reviewId, content) => {
   try {
-    const res = db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
-    return res.changes > 0;
+    db.runSync(
+      "UPDATE reviews SET content = ? WHERE id = ?",
+      [content.trim(), reviewId]
+    );
+    return { success: true };
   } catch (error) {
-    console.error("❌ Error deleteReviewById:", error);
-    return false;
+    console.error("❌ Error updateReview:", error);
+    return { success: false, error };
   }
 };
+
 
 // ============================================
 // ACCOUNT HELPER FUNCTIONS (No hashing)
@@ -1260,6 +1259,7 @@ export const seedSampleCinemas = () => {
     console.error("❌ Error seeding cinemas:", error);
   }
 };
+
 
 
 // ============================================

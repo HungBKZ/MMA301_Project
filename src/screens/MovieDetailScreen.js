@@ -510,6 +510,13 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 <Ionicons name="albums" size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
+              >
+                <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Review</Text>
+              </TouchableOpacity>
               {/* spacers to keep the same width as other buttons */}
               <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
               <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
