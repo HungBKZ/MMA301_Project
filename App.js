@@ -38,13 +38,16 @@ import CollectionDetailScreen from "./src/screens/collections/CollectionDetailSc
 import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
 import MapsScreen from "./src/screens/userScreens/MapsScreen";
 import ShowtimeScreen from "./src/screens/ShowtimeScreen";
+import RoomMap from "./src/screens/RoomMap";
+import CheckoutScreen from "./src/screens/CheckoutScreen";
 
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
 import { dropShowtimesTable, seedDefaultShowtimes } from "./src/database/showtimeDB";
-import { deleteAllMovies } from "./src/database/db";
+import { deleteAllMovies, deleteTableCinemas, resetAndSeedCinemas, seedCinemasCanTho } from "./src/database/db";
 import ReviewListScreen from "./src/screens/ReviewListScreen";
+import { deleteAllSeats, generateDefaultSeats, seedDefaultSeats, seedSeats } from "./src/database/seatDB";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -164,6 +167,21 @@ function UserHomeStack() {
         options={{ title: "Movie Details" }}
       />
       <Stack.Screen
+        name="Showtime"
+        component={ShowtimeScreen}
+        options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
+        name="RoomMap"
+        component={RoomMap}
+        options={{ title: "Chọn ghế" }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ title: "Thanh toán" }}
+      />
+      <Stack.Screen
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}
@@ -211,6 +229,16 @@ function SearchStack() {
         options={{ title: "Showtimes" }}
       />
       <Stack.Screen
+        name="RoomMap"
+        component={RoomMap}
+        options={{ title: "Chọn ghế" }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ title: "Thanh toán" }}
+      />
+      <Stack.Screen
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}
@@ -247,6 +275,21 @@ function WishlistStack() {
         name="Detail"
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="Showtime"
+        component={ShowtimeScreen}
+        options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
+        name="RoomMap"
+        component={RoomMap}
+        options={{ title: "Chọn ghế" }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ title: "Thanh toán" }}
       />
       <Stack.Screen
         name="ReviewList"
@@ -613,7 +656,12 @@ function AppNavigator() {
  * 🌎 Main App Component
  */
 export default function App() {
-  dropShowtimesTable();
+  // deleteAllMovies();
+  // dropShowtimesTable();
+  // deleteTableCinemas();
+  // seedCinemasCanTho();
+  // deleteAllSeats();
+  seedDefaultSeats();
   return (
     <AuthProvider>
       <NavigationContainer>

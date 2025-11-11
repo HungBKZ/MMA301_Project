@@ -69,7 +69,7 @@ export default function ShowtimeScreen({ route, navigation }) {
             // Đảm bảo bảng showtimes đã được seed (idempotent)
             ensureShowtimesSeeded();
             const raw = getShowtimesByMovieId(movieId);
-            console.log('Fetched showtimes for movieId', movieId, raw);
+            // console.log('Fetched showtimes for movieId', movieId, raw);
             // Use the currently loaded cinemas (or fetch them if empty)
             const allCinemas = cinemas && cinemas.length ? cinemas : getAllCinemas();
 
@@ -218,14 +218,21 @@ export default function ShowtimeScreen({ route, navigation }) {
                                                 style={styles.timeButton}
                                                 activeOpacity={0.9}
                                                 onPress={() => {
-                                                    // Placeholder for booking flow
-                                                    console.log('Selected showtime:', {
-                                                        id: st.id,
-                                                        movie_id: st.movie_id,
-                                                        cinema_id: st.cinema_id,
-                                                        show_date: st.show_date,
-                                                        show_time: st.show_time,
-                                                    });
+                                                    // Navigate to seat map for this showtime/room
+                                                    try {
+                                                        navigation.navigate('RoomMap', {
+                                                            showtimeId: st.id,
+                                                            roomId: st.room_id,
+                                                            movieId: st.movie_id,
+                                                            movieTitle,
+                                                            startTime: st.start_time,
+                                                            endTime: st.end_time,
+                                                            basePrice: st.base_price,
+                                                            cinemaName: st.cinema_name,
+                                                        });
+                                                    } catch (e) {
+                                                        console.log('Navigation to RoomMap failed:', e);
+                                                    }
                                                 }}
                                             >
                                                 <View style={styles.timeHeaderRow}>

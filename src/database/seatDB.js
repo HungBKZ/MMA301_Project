@@ -104,7 +104,7 @@ export const seedSeats = (seats = []) => {
 		db.execSync("COMMIT;");
 		return true;
 	} catch (error) {
-		try { db.execSync("ROLLBACK;"); } catch (e) {}
+		try { db.execSync("ROLLBACK;"); } catch (e) { }
 		console.error("❌ Error seedSeats:", error);
 		return false;
 	}
@@ -112,8 +112,14 @@ export const seedSeats = (seats = []) => {
 
 // Generate default seats programmatically for rooms 1..6
 export const generateDefaultSeats = (roomsCount = 6) => {
-	const rows = ['A', 'B', 'C'];
-	const seatsPerRow = 6;
+	// Rows layout: A B C D E F G
+	// Requirements:
+	//  - Row G: COUPLE seats
+	//  - Rows D, E, F: VIP seats
+	//  - Row C seat 1: ACCESSIBLE (keep existing special case)
+	//  - Remaining rows (A, B, C[>1]): STANDARD
+	const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+	const seatsPerRow = 8; // can adjust later per room
 	const result = [];
 	for (let r = 1; r <= roomsCount; r++) {
 		const baseId = (r - 1) * (rows.length * seatsPerRow);
@@ -121,8 +127,17 @@ export const generateDefaultSeats = (roomsCount = 6) => {
 			for (let sn = 1; sn <= seatsPerRow; sn++) {
 				const seatId = baseId + rowIndex * seatsPerRow + sn;
 				let seatType = 'STANDARD';
-				if (rowLabel === 'A') seatType = 'VIP';
-				else if (rowLabel === 'C' && sn === 1) seatType = 'ACCESSIBLE';
+
+				// Special accessible seat
+				if (rowLabel === 'C' && sn === 1) {
+					seatType = 'ACCESSIBLE';
+				} else if (['D', 'E', 'F'].includes(rowLabel)) {
+					// VIP rows
+					seatType = 'VIP';
+				} else if (rowLabel === 'G') {
+					// Couple seating row
+					seatType = 'COUPLE';
+				}
 
 				result.push({
 					id: seatId,
@@ -145,6 +160,17 @@ export const seedDefaultSeats = (roomsCount = 6) => {
 		return seedSeats(seats);
 	} catch (error) {
 		console.error('❌ Error seedDefaultSeats:', error);
+		return false;
+	}
+};
+
+export const deleteAllSeats = () => {
+	try {
+		db.runSync("DELETE FROM seats;");
+		console.log("✅ All seats deleted");
+		return true;
+	} catch (error) {
+		console.error("❌ Error deleteAllSeats:", error);
 		return false;
 	}
 };
