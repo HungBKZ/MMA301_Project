@@ -26,7 +26,8 @@ const AddMovieScreen = ({ navigation }) => {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Action");
   const [releaseYear, setReleaseYear] = useState("");
-  const [status, setStatus] = useState("To Watch");
+  const [durationMinutes, setDurationMinutes] = useState("120");
+  const [status, setStatus] = useState("COMING_SOON");
   const [posterUri, setPosterUri] = useState(null);
 
   // Danh sách categories phổ biến
@@ -42,7 +43,7 @@ const AddMovieScreen = ({ navigation }) => {
     "Documentary",
     "Fantasy",
   ];
-  const statuses = ["To Watch", "Watched", "Favorite"];
+  const statuses = ["COMING_SOON", "SHOWING", "ENDED"];
 
   /**
    * Chọn ảnh từ thư viện
@@ -128,7 +129,8 @@ const AddMovieScreen = ({ navigation }) => {
     if (!validateInput()) return;
 
     const year = parseInt(releaseYear);
-    const success = addMovie(title.trim(), category, year, status, posterUri);
+    const duration = parseInt(durationMinutes) || 120;
+    const success = addMovie(title.trim(), category, year, duration, status, posterUri);
 
     if (success) {
       Alert.alert("Success", `Added "${title}" to your collection!`, [
@@ -247,6 +249,20 @@ const AddMovieScreen = ({ navigation }) => {
             />
           </View>
 
+          {/* Duration */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Duration (minutes) *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 120"
+              placeholderTextColor={colors.textSecondary}
+              value={durationMinutes}
+              onChangeText={setDurationMinutes}
+              keyboardType="numeric"
+              maxLength={3}
+            />
+          </View>
+
           {/* Status */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Status</Text>
@@ -257,9 +273,9 @@ const AddMovieScreen = ({ navigation }) => {
                 style={styles.picker}
                 dropdownIconColor={colors.textPrimary}
               >
-                {statuses.map((stat) => (
-                  <Picker.Item key={stat} label={stat} value={stat} />
-                ))}
+                <Picker.Item label="Coming Soon" value="COMING_SOON" />
+                <Picker.Item label="Showing" value="SHOWING" />
+                <Picker.Item label="Ended" value="ENDED" />
               </Picker>
             </View>
           </View>

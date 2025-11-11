@@ -28,6 +28,10 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
 
+// 📱 Import screens - User
+import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
+import MapsScreen from "./src/screens/userScreens/MapsScreen";
+
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 
@@ -333,6 +337,9 @@ function UserTabs() {
             case "Home":
               iconName = focused ? "home" : "home-outline";
               break;
+            case "Maps":
+              iconName = focused ? "map" : "map-outline";
+              break;
             case "Search":
               iconName = focused ? "search" : "search-outline";
               break;
@@ -363,8 +370,31 @@ function UserTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeStack}
-        options={{ title: "Movies" }}
+        component={UserHomeScreen}
+        options={{ 
+          title: "Home",
+          headerShown: true,
+          headerStyle: { 
+            backgroundColor: colors.surface,
+            elevation: 4,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: { fontWeight: "bold" },
+        }}
+      />
+      <Tab.Screen
+        name="Maps"
+        component={MapsScreen}
+        options={{ 
+          title: "Maps",
+          headerShown: true,
+          headerStyle: { 
+            backgroundColor: colors.surface,
+            elevation: 4,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: { fontWeight: "bold" },
+        }}
       />
       <Tab.Screen
         name="Search"

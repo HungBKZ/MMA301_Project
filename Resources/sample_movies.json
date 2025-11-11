@@ -4,7 +4,8 @@
     "title": "Inception",
     "category": "Science Fiction",
     "release_year": 2010,
-    "status": "Watched",
+    "duration_minutes": 148,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/qmDpIHrmpJINaRKAfWQfftjCdyi.jpg"
   },
   {
@@ -12,7 +13,8 @@
     "title": "The Dark Knight",
     "category": "Action",
     "release_year": 2008,
-    "status": "Favorite",
+    "duration_minutes": 152,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
   },
   {
@@ -20,7 +22,8 @@
     "title": "Parasite",
     "category": "Drama",
     "release_year": 2019,
-    "status": "Watched",
+    "duration_minutes": 132,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg"
   },
   {
@@ -28,7 +31,8 @@
     "title": "Interstellar",
     "category": "Science Fiction",
     "release_year": 2014,
-    "status": "Favorite",
+    "duration_minutes": 169,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg"
   },
   {
@@ -36,7 +40,8 @@
     "title": "La La Land",
     "category": "Romance",
     "release_year": 2016,
-    "status": "To Watch",
+    "duration_minutes": 128,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg"
   },
   {
@@ -44,7 +49,8 @@
     "title": "Avengers: Endgame",
     "category": "Action",
     "release_year": 2019,
-    "status": "Watched",
+    "duration_minutes": 181,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
   },
   {
@@ -52,7 +58,8 @@
     "title": "Joker",
     "category": "Thriller",
     "release_year": 2019,
-    "status": "Favorite",
+    "duration_minutes": 122,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg"
   },
   {
@@ -60,7 +67,8 @@
     "title": "Spirited Away",
     "category": "Animation",
     "release_year": 2001,
-    "status": "Watched",
+    "duration_minutes": 125,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/oRvMaJOmapypFUcQqpgHMZA6qL9.jpg"
   },
   {
@@ -68,15 +76,35 @@
     "title": "The Godfather",
     "category": "Crime",
     "release_year": 1972,
-    "status": "Favorite",
+    "duration_minutes": 175,
+    "status": "ENDED",
     "poster_uri": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"
   },
   {
     "id": 10,
-    "title": "Everything Everywhere All at Once",
-    "category": "Adventure",
-    "release_year": 2022,
-    "status": "To Watch",
-    "poster_uri": "https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg"
+    "title": "Dune: Part Two",
+    "category": "Science Fiction",
+    "release_year": 2024,
+    "duration_minutes": 166,
+    "status": "SHOWING",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg"
+  },
+  {
+    "id": 11,
+    "title": "Deadpool 3",
+    "category": "Action",
+    "release_year": 2025,
+    "duration_minutes": 120,
+    "status": "COMING_SOON",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/4yrOyO3N55XazHQXXYoqiiPQd40.jpg"
+  },
+  {
+    "id": 12,
+    "title": "Avatar 3",
+    "category": "Science Fiction",
+    "release_year": 2025,
+    "duration_minutes": 180,
+    "status": "COMING_SOON",
+    "poster_uri": "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg"
   }
 ]
