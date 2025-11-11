@@ -6,6 +6,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+
+// Auth provider (compat shim)
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 
 // 🗄️ Import database (tự động tạo DB khi app khởi động)
@@ -27,6 +29,7 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
+import UpdateProfileScreen from "./src/screens/UpdateProfileScreen";
 import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
 import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
 
@@ -49,30 +52,16 @@ const Stack = createNativeStackNavigator();
  */
 function AuthStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ title: "Login" }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen
         name="Register"
         component={RegisterScreen}
         options={{
           headerShown: true,
-          headerStyle: {
-            backgroundColor: colors.surface,
-            elevation: 4,
-          },
+          headerStyle: { backgroundColor: colors.surface, elevation: 4 },
           headerTintColor: colors.primary,
-          headerTitleStyle: {
-            fontWeight: "bold",
-            color: colors.textPrimary,
-          },
+          headerTitleStyle: { fontWeight: "bold", color: colors.textPrimary },
           title: "Create Account",
         }}
       />
@@ -330,7 +319,7 @@ function ReportsStack() {
  * � Admin Tab Navigator
  * Tất cả tính năng cho admin
  */
-function AdminTabs() {
+function AdminTabs({ userId, email }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -432,6 +421,7 @@ function AdminTabs() {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        initialParams={{ userId, email }}
         options={{
           title: "Profile",
           headerShown: true,
@@ -455,7 +445,7 @@ function AdminTabs() {
  * 👤 User Tab Navigator
  * Tính năng giới hạn cho user
  */
-function UserTabs() {
+function UserTabs({ userId, email }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -543,6 +533,7 @@ function UserTabs() {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        initialParams={{ userId, email }}
         options={{
           title: "Profile",
           headerShown: true,
@@ -584,11 +575,19 @@ function AppNavigator() {
   }
 
   // Đã đăng nhập -> Admin hoặc User tabs
-  if (user.role === "admin") {
-    return <AdminTabs />;
-  }
-
-  return <UserTabs />;
+  // Wrap tabs inside a stack so we can navigate to screens like UpdateProfile
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs">
+        {() => (user.role === "admin" ? <AdminTabs /> : <UserTabs />)}
+      </Stack.Screen>
+      <Stack.Screen
+        name="UpdateProfile"
+        component={UpdateProfileScreen}
+        options={{ title: "Cập nhật tài khoản" }}
+      />
+    </Stack.Navigator>
+  );
 }
 
 /**
@@ -604,3 +603,5 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+
