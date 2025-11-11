@@ -75,8 +75,9 @@ export default function MapsScreen() {
       // Chỉ lấy 3 rạp gần nhất và đổi tên thành AquaCode Cinema 1, 2, 3
       const top3Cinemas = nearbyCinemas.slice(0, 3);
       
-      // Format cinemas với tên AquaCode Cinema
+      // Format cinemas với tên AquaCode Cinema và id
       const formattedCinemas = top3Cinemas.map((cinema, index) => ({
+        id: index + 1,
         latitude: cinema.latitude,
         longitude: cinema.longitude,
         title: `AquaCode Cinema ${index + 1}`,
