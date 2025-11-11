@@ -4,7 +4,7 @@
 // Mục tiêu: Hoàn thiện các hàm SQLite cho bảng movies theo yêu cầu đồ án
 // Làm theo từng TODO. Ước lượng thời gian: 15–25 phút (Core), +15 phút (Advanced)
 
-import * as SQLite from "expo-sqlite";
+import { db } from "./connection";
 import * as SecureStore from "expo-secure-store"; // Dùng để import trong authService
 import { seedDefaultShowtimes, initShowtimesTable, isShowtimeSeeded, getAllShowtimes, ensureShowtimesSeeded, getShowtimesCount } from "./showtimeDB";
 import { seedDefaultSeats, initSeatsTable } from "./seatDB";
@@ -12,16 +12,15 @@ import { seedBookingsAndTickets } from "./bookingDB";
 import { seedDefaultRooms, initRoomsTable } from "./roomDB";
 
 // ============================================
-// STEP 0: Open database connection
+// STEP 0: Database connection is provided by connection.js (avoid circular imports)
 // ============================================
-const db = SQLite.openDatabaseSync("moviesApp.db");
 import { initAccountsTable, seedAdminAccount, migrateAccountTable } from "./accountDB";
 
 
 // ============================================
 // STEP 1: Initialize Database (Create Tables)
 // ============================================
-export const initDatabase = async () => {
+export const initDatabase = () => {
   try {
     // 1. Bảng MOVIES
     db.execSync(`
@@ -36,25 +35,25 @@ export const initDatabase = async () => {
       );
     `);
 
-    // 2. Bảng account (SỬ DỤNG PASSWORD PLAIN TEXT - THEO YÊU CẦU)
-//     db.execSync(`
-//       CREATE TABLE IF NOT EXISTS account (
-//         id INTEGER PRIMARY KEY AUTOINCREMENT,
-//         email TEXT NOT NULL UNIQUE,
-//         password TEXT,             
-//         name TEXT,
-//         avatar_uri TEXT,
-//         role TEXT DEFAULT 'User', 
-//         oauth_provider TEXT,
-//         oauth_id TEXT,
-//         oauth_profile TEXT,
-//         created_at DATETIME DEFAULT (datetime('now'))
-//       );
-//     `);
+    // 2. Bảng ACCOUNT (no hashing – theo yêu cầu)
+    // db.execSync(`
+    //   CREATE TABLE IF NOT EXISTS account (
+    //     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    //     email TEXT NOT NULL UNIQUE,
+    //     password TEXT,
+    //     name TEXT,
+    //     avatar_uri TEXT,
+    //     role TEXT DEFAULT 'User',
+    //     oauth_provider TEXT,
+    //     oauth_id TEXT,
+    //     oauth_profile TEXT,
+    //     created_at DATETIME DEFAULT (datetime('now'))
+    //   );
+    // `);
 
-    // Bảng wishlist (phim yêu thích)
+    // 3. Bảng WISHLIST (phim yêu thích)
     db.execSync(`
-       CREATE TABLE IF NOT EXISTS wishlist (
+      CREATE TABLE IF NOT EXISTS wishlist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         movie_id INTEGER NOT NULL,
@@ -64,7 +63,7 @@ export const initDatabase = async () => {
         FOREIGN KEY(movie_id) REFERENCES movies(id)
       );
     `);
-    console.log("✅ Database initialized successfully (including account table)");
+    console.log("✅ Database initialized successfully (movies, account, wishlist)");
     // 3. Bảng CINEMAS (Rạp chiếu phim)
     db.execSync(`
       CREATE TABLE IF NOT EXISTS cinemas (
@@ -129,10 +128,14 @@ export const initDatabase = async () => {
     initSeatsTable();
     initShowtimesTable();
 
-    seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
-    await initAccountsTable();
-    migrateAccountTable();
-    await seedAdminAccount();    
+    // Seed/migrate account bảng phụ (nếu có logic nâng cao trong accountDB)
+    try {
+      initAccountsTable && initAccountsTable();
+      migrateAccountTable && migrateAccountTable();
+      seedAdminAccount && seedAdminAccount();
+    } catch (e) {
+      console.warn('⚠️ Account table migration/seed skipped:', e);
+    }
     seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
     seedDefaultRooms(); // Tạo dữ liệu phòng chiếu mặc định
     seedDefaultSeats(); // Tạo dữ liệu ghế ngồi mặc định

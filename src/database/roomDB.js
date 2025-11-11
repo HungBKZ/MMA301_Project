@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./connection";
 
 // Initialize rooms table (SQLite compatible)
 export const initRoomsTable = () => {

@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./connection";
 
 // Initialize showtimes table
 export const initShowtimesTable = () => {

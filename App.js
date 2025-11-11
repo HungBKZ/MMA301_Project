@@ -613,6 +613,7 @@ function AppNavigator() {
  * 🌎 Main App Component
  */
 export default function App() {
+  dropShowtimesTable();
   return (
     <AuthProvider>
       <NavigationContainer>
