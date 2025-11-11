@@ -30,6 +30,7 @@ import ProfileScreen from "./src/screens/ProfileScreen";
 
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
+import WishListScreen from "./src/screens/WishListScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -56,12 +57,12 @@ function AuthStack() {
         component={RegisterScreen}
         options={{
           headerShown: true,
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: colors.surface,
             elevation: 4,
           },
           headerTintColor: colors.primary,
-          headerTitleStyle: { 
+          headerTitleStyle: {
             fontWeight: "bold",
             color: colors.textPrimary,
           },
@@ -80,7 +81,7 @@ function HomeStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { 
+        headerStyle: {
           backgroundColor: colors.surface,
           elevation: 4,
           shadowColor: colors.primary,
@@ -89,7 +90,7 @@ function HomeStack() {
           shadowRadius: 4,
         },
         headerTintColor: colors.primary,
-        headerTitleStyle: { 
+        headerTitleStyle: {
           fontWeight: "bold",
           color: colors.textPrimary,
         },
@@ -127,7 +128,7 @@ function SearchStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { 
+        headerStyle: {
           backgroundColor: colors.surface,
           elevation: 4,
           shadowColor: colors.primary,
@@ -136,7 +137,7 @@ function SearchStack() {
           shadowRadius: 4,
         },
         headerTintColor: colors.primary,
-        headerTitleStyle: { 
+        headerTitleStyle: {
           fontWeight: "bold",
           color: colors.textPrimary,
         },
@@ -156,15 +157,11 @@ function SearchStack() {
   );
 }
 
-/**
- * �📊 Reports Stack Navigator
- * Gồm: Category Report + Favorite Years Report
- */
-function ReportsStack() {
+function WishlistStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { 
+        headerStyle: {
           backgroundColor: colors.surface,
           elevation: 4,
           shadowColor: colors.primary,
@@ -173,7 +170,43 @@ function ReportsStack() {
           shadowRadius: 4,
         },
         headerTintColor: colors.primary,
-        headerTitleStyle: { 
+        headerTitleStyle: {
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="WishListMain"
+        component={WishListScreen}
+        options={{ title: "Wishlist" }}
+      />
+      <Stack.Screen
+        name="Detail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+/**
+ * �📊 Reports Stack Navigator
+ * Gồm: Category Report + Favorite Years Report
+ */
+function ReportsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: {
           fontWeight: "bold",
           color: colors.textPrimary,
         },
@@ -227,94 +260,94 @@ function AdminTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textSecondary,
-          tabBarStyle: {
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+          elevation: 8,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeStack}
+        options={{ title: "Movies" }}
+      />
+      <Tab.Screen
+        name="Search"
+        component={SearchStack}
+        options={{ title: "Search" }}
+      />
+      <Tab.Screen
+        name="Reports"
+        component={ReportsStack}
+        options={{ title: "Reports" }}
+      />
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          title: "Dashboard",
+          headerShown: true,
+          headerStyle: {
             backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            paddingBottom: 5,
-            paddingTop: 5,
-            height: 60,
-            elevation: 8,
+            elevation: 4,
             shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
           },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-          headerShown: false,
-        })}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeStack}
-          options={{ title: "Movies" }}
-        />
-        <Tab.Screen
-          name="Search"
-          component={SearchStack}
-          options={{ title: "Search" }}
-        />
-        <Tab.Screen
-          name="Reports"
-          component={ReportsStack}
-          options={{ title: "Reports" }}
-        />
-        <Tab.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{
-            title: "Dashboard",
-            headerShown: true,
-            headerStyle: { 
-              backgroundColor: colors.surface,
-              elevation: 4,
-              shadowColor: colors.primary,
-            },
-            headerTintColor: colors.primary,
-            headerTitleStyle: { 
-              fontWeight: "bold",
-              color: colors.textPrimary,
-            },
-          }}
-        />
-        <Tab.Screen
-          name="Data"
-          component={DataManagementScreen}
-          options={{
-            title: "Data",
-            headerShown: true,
-            headerStyle: { 
-              backgroundColor: colors.surface,
-              elevation: 4,
-              shadowColor: colors.primary,
-            },
-            headerTintColor: colors.primary,
-            headerTitleStyle: { 
-              fontWeight: "bold",
-              color: colors.textPrimary,
-            },
-          }}
-        />
-        <Tab.Screen
-          name="Profile"
-          component={ProfileScreen}
-          options={{
-            title: "Profile",
-            headerShown: true,
-            headerStyle: { 
-              backgroundColor: colors.surface,
-              elevation: 4,
-              shadowColor: colors.primary,
-            },
-            headerTintColor: colors.primary,
-            headerTitleStyle: { 
-              fontWeight: "bold",
-              color: colors.textPrimary,
-            },
-          }}
-        />
-      </Tab.Navigator>
+          headerTintColor: colors.primary,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+        }}
+      />
+      <Tab.Screen
+        name="Data"
+        component={DataManagementScreen}
+        options={{
+          title: "Data",
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.surface,
+            elevation: 4,
+            shadowColor: colors.primary,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          title: "Profile",
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.surface,
+            elevation: 4,
+            shadowColor: colors.primary,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+        }}
+      />
+    </Tab.Navigator>
   );
 }
 
@@ -336,9 +369,13 @@ function UserTabs() {
             case "Search":
               iconName = focused ? "search" : "search-outline";
               break;
+            case "Wishlist":
+              iconName = focused ? "heart" : "heart-outline";
+              break;
             case "Profile":
               iconName = focused ? "person" : "person-outline";
               break;
+
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -372,18 +409,23 @@ function UserTabs() {
         options={{ title: "Search" }}
       />
       <Tab.Screen
+        name="Wishlist"
+        component={WishlistStack}
+        options={{ title: "Wishlist" }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
           title: "Profile",
           headerShown: true,
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: colors.surface,
             elevation: 4,
             shadowColor: colors.primary,
           },
           headerTintColor: colors.primary,
-          headerTitleStyle: { 
+          headerTitleStyle: {
             fontWeight: "bold",
             color: colors.textPrimary,
           },
