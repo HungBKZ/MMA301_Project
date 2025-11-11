@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { exportMoviesData, importMoviesData } from "../database/db";
@@ -27,7 +27,10 @@ const DataManagementScreen = () => {
   const handleExportData = async () => {
     try {
       setIsLoading(true);
+      console.log("Starting export...");
+      
       const moviesData = exportMoviesData();
+      console.log("Exported movies count:", moviesData.length);
 
       if (moviesData.length === 0) {
         Alert.alert("No Data", "There are no movies to export.");
@@ -43,11 +46,13 @@ const DataManagementScreen = () => {
       const fileName = `movies_backup_${timestamp}.json`;
       const fileUri = FileSystem.documentDirectory + fileName;
 
-      await FileSystem.writeAsStringAsync(fileUri, jsonData, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      console.log("Writing file to:", fileUri);
+      await FileSystem.writeAsStringAsync(fileUri, jsonData);
+      console.log("File written successfully");
 
       const canShare = await Sharing.isAvailableAsync();
+      console.log("Can share:", canShare);
+      
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: "application/json",
@@ -81,17 +86,22 @@ const DataManagementScreen = () => {
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled) {
+      console.log("DocumentPicker result:", result);
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        console.log("Import canceled or no file selected");
         setIsLoading(false);
         return;
       }
 
       const fileUri = result.assets[0].uri;
-      const fileContent = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      console.log("Reading file from:", fileUri);
+
+      const fileContent = await FileSystem.readAsStringAsync(fileUri);
 
       const moviesData = JSON.parse(fileContent);
+      console.log("Parsed movies data:", moviesData.length, "movies");
+
       if (!Array.isArray(moviesData) || moviesData.length === 0) {
         Alert.alert(
           "Invalid File",
@@ -101,6 +111,9 @@ const DataManagementScreen = () => {
         return;
       }
 
+      // Tạm thời tắt loading để hiển thị Alert
+      setIsLoading(false);
+
       Alert.alert(
         "Import Options",
         `Found ${moviesData.length} movies.\nHow do you want to handle duplicate IDs?`,
@@ -108,7 +121,6 @@ const DataManagementScreen = () => {
           {
             text: "Cancel",
             style: "cancel",
-            onPress: () => setIsLoading(false),
           },
           {
             text: "Skip Duplicates",
@@ -129,11 +141,24 @@ const DataManagementScreen = () => {
   };
 
   /** Thực hiện import dữ liệu */
-  const performImport = (moviesData, overwrite) => {
+  const performImport = async (moviesData, overwrite) => {
     try {
+      setIsLoading(true);
+      console.log("Performing import with overwrite:", overwrite);
+      
       const result = importMoviesData(moviesData, overwrite);
+      console.log("Import result:", result);
+      
       const message = `Import completed!\n\nSuccessfully imported: ${result.success}\nFailed: ${result.failed}\nSkipped: ${result.skipped}`;
-      Alert.alert("Import Complete", message);
+      
+      Alert.alert("Import Complete", message, [
+        {
+          text: "OK",
+          onPress: () => {
+            console.log("Import completed successfully");
+          },
+        },
+      ]);
     } catch (error) {
       console.error("Import error:", error);
       Alert.alert("Import Failed", "Unable to import data: " + error.message);
@@ -177,19 +202,24 @@ const DataManagementScreen = () => {
   const handleExportTemplate = async () => {
     try {
       setIsLoading(true);
+      console.log("Creating sample template...");
+      
       const templateData = createSampleData();
       const fileName = "movies_template.json";
       const fileUri = FileSystem.documentDirectory + fileName;
 
-      await FileSystem.writeAsStringAsync(fileUri, templateData, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      console.log("Writing template to:", fileUri);
+      await FileSystem.writeAsStringAsync(fileUri, templateData);
+      console.log("Template written successfully");
 
       const canShare = await Sharing.isAvailableAsync();
+      console.log("Can share template:", canShare);
+      
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: "application/json",
           dialogTitle: "Sample Movies Template",
+          UTI: "public.json",
         });
       }
 

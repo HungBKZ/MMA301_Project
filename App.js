@@ -89,6 +89,23 @@ function UserStack() {
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={defaultHeaderOptions}>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
       <Stack.Screen
         name="HomeMain"
         component={HomeScreen}
@@ -117,6 +134,66 @@ function HomeStack() {
 function ReportsStack() {
   return (
     <Stack.Navigator screenOptions={defaultHeaderOptions}>
+/**
+ * � Search Stack Navigator
+ * Gồm: Search + Movie Detail
+ */
+function SearchStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="SearchMain"
+        component={SearchScreen}
+        options={{ title: "Search & Filter" }}
+      />
+      <Stack.Screen
+        name="Detail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * �📊 Reports Stack Navigator
+ * Gồm: Category Report + Favorite Years Report
+ */
+function ReportsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
       <Stack.Screen
         name="CategoryReport"
         component={CategoryReportScreen}
@@ -199,6 +276,106 @@ function AdminTabNavigator() {
         options={{ title: "User Info", headerShown: true }}
       />
     </Tab.Navigator>
+    <NavigationContainer>
+      <StatusBar style="dark" />
+
+      {/* 🧭 Bottom Tab Navigation */}
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName;
+
+            switch (route.name) {
+              case "Home":
+                iconName = focused ? "home" : "home-outline";
+                break;
+              case "Search":
+                iconName = focused ? "search" : "search-outline";
+                break;
+              case "Reports":
+                iconName = focused ? "stats-chart" : "stats-chart-outline";
+                break;
+              case "Dashboard":
+                iconName = focused ? "analytics" : "analytics-outline";
+                break;
+              case "Data":
+                iconName = focused ? "folder-open" : "folder-open-outline";
+                break;
+            }
+
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textSecondary,
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            paddingBottom: 5,
+            paddingTop: 5,
+            height: 60,
+            elevation: 8,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+          },
+          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+          headerShown: false,
+        })}
+      >
+        <Tab.Screen
+          name="Home"
+          component={HomeStack}
+          options={{ title: "Movies" }}
+        />
+        <Tab.Screen
+          name="Search"
+          component={SearchStack}
+          options={{ title: "Search" }}
+        />
+        <Tab.Screen
+          name="Reports"
+          component={ReportsStack}
+          options={{ title: "Reports" }}
+        />
+        <Tab.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{
+            title: "Dashboard",
+            headerShown: true,
+            headerStyle: { 
+              backgroundColor: colors.surface,
+              elevation: 4,
+              shadowColor: colors.primary,
+            },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: colors.textPrimary,
+            },
+          }}
+        />
+        <Tab.Screen
+          name="Data"
+          component={DataManagementScreen}
+          options={{
+            title: "Data",
+            headerShown: true,
+            headerStyle: { 
+              backgroundColor: colors.surface,
+              elevation: 4,
+              shadowColor: colors.primary,
+            },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: colors.textPrimary,
+            },
+          }}
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 
