@@ -1,15 +1,17 @@
 // App.js
 import React from "react";
 import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 
 // 🗄️ Import database (tự động tạo DB khi app khởi động)
 import "./src/database/db";
 
-// 📱 Import screens
+// 📱 Import screens - Admin/Common
 import HomeScreen from "./src/screens/HomeScreen";
 import AddMovieScreen from "./src/screens/AddMovieScreen";
 import MovieDetailScreen from "./src/screens/MovieDetailScreen";
@@ -19,12 +21,56 @@ import FavoriteYearsReportScreen from "./src/screens/FavoriteYearsReportScreen";
 import DataManagementScreen from "./src/screens/DataManagementScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
 
+// 📱 Import screens - Auth
+import LoginScreen from "./src/screens/authScreens/LoginScreen";
+import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
+
+// 📱 Import screens - Profile
+import ProfileScreen from "./src/screens/ProfileScreen";
+
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+/**
+ * 🔐 Auth Stack Navigator
+ * Màn hình đăng nhập và đăng ký
+ */
+function AuthStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ title: "Login" }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { 
+            backgroundColor: colors.surface,
+            elevation: 4,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: { 
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+          title: "Create Account",
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 /**
  * 🏠 Home Stack Navigator
@@ -74,7 +120,7 @@ function HomeStack() {
 }
 
 /**
- * � Search Stack Navigator
+ * Search Stack Navigator
  * Gồm: Search + Movie Detail
  */
 function SearchStack() {
@@ -148,39 +194,39 @@ function ReportsStack() {
 }
 
 /**
- * 🌎 Main App Component
+ * � Admin Tab Navigator
+ * Tất cả tính năng cho admin
  */
-export default function App() {
+function AdminTabs() {
   return (
-    <NavigationContainer>
-      <StatusBar style="dark" />
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
 
-      {/* 🧭 Bottom Tab Navigation */}
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
+          switch (route.name) {
+            case "Home":
+              iconName = focused ? "home" : "home-outline";
+              break;
+            case "Search":
+              iconName = focused ? "search" : "search-outline";
+              break;
+            case "Reports":
+              iconName = focused ? "stats-chart" : "stats-chart-outline";
+              break;
+            case "Dashboard":
+              iconName = focused ? "analytics" : "analytics-outline";
+              break;
+            case "Data":
+              iconName = focused ? "folder-open" : "folder-open-outline";
+              break;
+            case "Profile":
+              iconName = focused ? "person" : "person-outline";
+              break;
+          }
 
-            switch (route.name) {
-              case "Home":
-                iconName = focused ? "home" : "home-outline";
-                break;
-              case "Search":
-                iconName = focused ? "search" : "search-outline";
-                break;
-              case "Reports":
-                iconName = focused ? "stats-chart" : "stats-chart-outline";
-                break;
-              case "Dashboard":
-                iconName = focused ? "analytics" : "analytics-outline";
-                break;
-              case "Data":
-                iconName = focused ? "folder-open" : "folder-open-outline";
-                break;
-            }
-
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textSecondary,
           tabBarStyle: {
@@ -250,7 +296,142 @@ export default function App() {
             },
           }}
         />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{
+            title: "Profile",
+            headerShown: true,
+            headerStyle: { 
+              backgroundColor: colors.surface,
+              elevation: 4,
+              shadowColor: colors.primary,
+            },
+            headerTintColor: colors.primary,
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: colors.textPrimary,
+            },
+          }}
+        />
       </Tab.Navigator>
-    </NavigationContainer>
+  );
+}
+
+/**
+ * 👤 User Tab Navigator
+ * Tính năng giới hạn cho user
+ */
+function UserTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          switch (route.name) {
+            case "Home":
+              iconName = focused ? "home" : "home-outline";
+              break;
+            case "Search":
+              iconName = focused ? "search" : "search-outline";
+              break;
+            case "Profile":
+              iconName = focused ? "person" : "person-outline";
+              break;
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+          elevation: 8,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeStack}
+        options={{ title: "Movies" }}
+      />
+      <Tab.Screen
+        name="Search"
+        component={SearchStack}
+        options={{ title: "Search" }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          title: "Profile",
+          headerShown: true,
+          headerStyle: { 
+            backgroundColor: colors.surface,
+            elevation: 4,
+            shadowColor: colors.primary,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: { 
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+/**
+ * 🎯 Main App Logic
+ * Điều hướng dựa trên trạng thái đăng nhập
+ */
+function AppNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 16, color: colors.textPrimary }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Chưa đăng nhập -> AuthStack
+  if (!user) {
+    return <AuthStack />;
+  }
+
+  // Đã đăng nhập -> Admin hoặc User tabs
+  if (user.role === "admin") {
+    return <AdminTabs />;
+  }
+
+  return <UserTabs />;
+}
+
+/**
+ * 🌎 Main App Component
+ */
+export default function App() {
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <StatusBar style="dark" />
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
