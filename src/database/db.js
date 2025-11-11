@@ -24,7 +24,8 @@ export const initDatabase = () => {
         title TEXT NOT NULL,
         category TEXT NOT NULL,
         release_year INTEGER NOT NULL,
-        status TEXT DEFAULT 'To Watch',
+        duration_minutes INTEGER NOT NULL DEFAULT 0,
+        status TEXT DEFAULT 'COMING_SOON' CHECK(status IN ('COMING_SOON', 'SHOWING', 'ENDED')),
         poster_uri TEXT
       );
     `);
@@ -56,9 +57,213 @@ export const initDatabase = () => {
       );
     `);
     console.log("✅ Database initialized successfully (including account table)");
+
+    // 3. Bảng CINEMAS (Rạp chiếu phim)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS cinemas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        phone TEXT,
+        opening_hours TEXT,
+        website TEXT,
+        total_screens INTEGER DEFAULT 0,
+        facilities TEXT,
+        created_at DATETIME DEFAULT (datetime('now'))
+      );
+    `);
+
+    // 4. Bảng SHOWTIMES (Lịch chiếu phim)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS showtimes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_id INTEGER NOT NULL,
+        cinema_id INTEGER NOT NULL,
+        screen_number INTEGER,
+        show_date TEXT NOT NULL,
+        show_time TEXT NOT NULL,
+        price REAL DEFAULT 0,
+        available_seats INTEGER DEFAULT 0,
+        total_seats INTEGER DEFAULT 0,
+        language TEXT DEFAULT 'Vietnamese',
+        subtitle TEXT DEFAULT 'Vietnamese',
+        created_at DATETIME DEFAULT (datetime('now')),
+        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+        FOREIGN KEY (cinema_id) REFERENCES cinemas(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 5. Bảng collections (bộ sưu tập cá nhân)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        created_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, name),
+        FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 6. Bảng collection_items (phim trong bộ sưu tập)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        PRIMARY KEY (collection_id, movie_id),
+        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 7. Bảng reviews (đánh giá phim)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        created_at DATETIME DEFAULT (datetime('now')),
+        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
+      );
+    `);
+
+    console.log("✅ Database initialized successfully (movies, account, cinemas, showtimes)");
+    
+    // Migration: Thêm duration_minutes và cập nhật status nếu chưa có
+    migrateDatabase();
+    
     seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
+    seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
   } catch (error) {
     console.error("❌ Error initializing database:", error);
+  }
+};
+
+// ============================================
+// DATABASE MIGRATION
+// ============================================
+const migrateDatabase = () => {
+  try {
+    // Kiểm tra xem cột duration_minutes đã tồn tại chưa
+    const tableInfo = db.getAllSync("PRAGMA table_info(movies)");
+    const hasDuration = tableInfo.some(col => col.name === "duration_minutes");
+    
+    if (!hasDuration) {
+      console.log("🔄 Migrating database: Adding duration_minutes column...");
+      db.execSync("ALTER TABLE movies ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 120");
+      console.log("✅ Added duration_minutes column");
+    }
+    
+    // Cập nhật các giá trị status cũ sang format mới
+    console.log("🔄 Updating status values to new format...");
+    db.execSync(`
+      UPDATE movies 
+      SET status = CASE 
+        WHEN status = 'To Watch' THEN 'COMING_SOON'
+        WHEN status = 'Watching' THEN 'SHOWING'
+        WHEN status = 'Watched' THEN 'ENDED'
+        WHEN status IN ('COMING_SOON', 'SHOWING', 'ENDED') THEN status
+        ELSE 'COMING_SOON'
+      END
+      WHERE status NOT IN ('COMING_SOON', 'SHOWING', 'ENDED')
+    `);
+    console.log("✅ Database migration completed");
+
+    // Ensure collections table and required columns exist
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        created_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, name)
+      )`);
+      const collectionsInfo = db.getAllSync("PRAGMA table_info(collections)");
+      const hasUserIdCol = collectionsInfo.some(col => col.name === "user_id");
+      const hasNameCol = collectionsInfo.some(col => col.name === "name");
+      const hasCreatedAtCol = collectionsInfo.some(col => col.name === "created_at");
+      if (!hasUserIdCol) {
+        console.log("🔄 Migrating: Adding collections.user_id");
+        db.execSync("ALTER TABLE collections ADD COLUMN user_id INTEGER");
+      }
+      if (!hasNameCol) {
+        console.log("🔄 Migrating: Adding collections.name");
+        db.execSync("ALTER TABLE collections ADD COLUMN name TEXT");
+      }
+      if (!hasCreatedAtCol) {
+        console.log("🔄 Migrating: Adding collections.created_at");
+        db.execSync("ALTER TABLE collections ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))");
+      }
+    } catch (e) {
+      console.error("❌ Migration error (collections):", e);
+    }
+
+    // Ensure collection_items table exists
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        PRIMARY KEY (collection_id, movie_id)
+      )`);
+      const ciInfo = db.getAllSync("PRAGMA table_info(collection_items)");
+      const hasCollectionId = ciInfo.some(col => col.name === "collection_id");
+      const hasMovieId = ciInfo.some(col => col.name === "movie_id");
+      const hasAddedAt = ciInfo.some(col => col.name === "added_at");
+      if (!hasCollectionId) {
+        console.log("🔄 Migrating: Adding collection_items.collection_id");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN collection_id INTEGER");
+      }
+      if (!hasMovieId) {
+        console.log("🔄 Migrating: Adding collection_items.movie_id");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN movie_id INTEGER");
+      }
+      if (!hasAddedAt) {
+        console.log("🔄 Migrating: Adding collection_items.added_at");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN added_at DATETIME DEFAULT (datetime('now'))");
+      }
+    } catch (e) {
+      console.error("❌ Migration error (collection_items):", e);
+    }
+
+    // Ensure reviews table exists
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        created_at DATETIME DEFAULT (datetime('now'))
+      )`);
+      const rvInfo = db.getAllSync("PRAGMA table_info(reviews)");
+      const cols = ["movie_id", "user_id", "content", "status", "created_at"];
+      cols.forEach((c) => {
+        const exists = rvInfo.some(col => col.name === c);
+        if (!exists) {
+          console.log(`🔄 Migrating: Adding reviews.${c}`);
+          if (c === "status") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+          } else if (c === "created_at") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))");
+          } else if (c === "content") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN content TEXT");
+          } else {
+            db.execSync(`ALTER TABLE reviews ADD COLUMN ${c} INTEGER`);
+          }
+        }
+      });
+    } catch (e) {
+      console.error("❌ Migration error (reviews):", e);
+    }
+  } catch (error) {
+    console.error("❌ Error migrating database:", error);
   }
 };
 
@@ -82,13 +287,14 @@ export const addMovie = (
   title,
   category,
   releaseYear,
-  status = "To Watch",
+  durationMinutes = 120,
+  status = "COMING_SOON",
   posterUri = null
 ) => {
   try {
     const result = db.runSync(
-      "INSERT INTO movies (title, category, release_year, status, poster_uri) VALUES (?, ?, ?, ?, ?)",
-      [title, category, releaseYear, status, posterUri]
+      "INSERT INTO movies (title, category, release_year, duration_minutes, status, poster_uri) VALUES (?, ?, ?, ?, ?, ?)",
+      [title, category, releaseYear, durationMinutes, status, posterUri]
     );
     console.log("✅ Movie added with ID:", result.lastInsertRowId);
     return true;
@@ -116,13 +322,14 @@ export const updateMovie = (
   title,
   category,
   releaseYear,
+  durationMinutes,
   status,
   posterUri
 ) => {
   try {
     const result = db.runSync(
-      "UPDATE movies SET title = ?, category = ?, release_year = ?, status = ?, poster_uri = ? WHERE id = ?",
-      [title, category, releaseYear, status, posterUri, id]
+      "UPDATE movies SET title = ?, category = ?, release_year = ?, duration_minutes = ?, status = ?, poster_uri = ? WHERE id = ?",
+      [title, category, releaseYear, durationMinutes, status, posterUri, id]
     );
     console.log("✅ Movie updated, rows affected:", result.changes);
     return true;
@@ -327,6 +534,7 @@ export const importMoviesData = (moviesData, overwrite = false) => {
               movie.title,
               movie.category,
               movie.release_year,
+              movie.duration_minutes || 120,
               movie.status,
               movie.poster_uri
             );
@@ -340,6 +548,7 @@ export const importMoviesData = (moviesData, overwrite = false) => {
             movie.title,
             movie.category,
             movie.release_year,
+            movie.duration_minutes || 120,
             movie.status,
             movie.poster_uri
           );
@@ -370,6 +579,171 @@ export const deleteAllMovies = () => {
   }
 };
 
+
+// ============================================
+// COLLECTIONS – UC-24/25/26
+// ============================================
+
+export const createCollection = (userId, name) => {
+  try {
+    const result = db.runSync(
+      "INSERT INTO collections (user_id, name) VALUES (?, ?)",
+      [userId, name.trim()]
+    );
+    return { success: true, id: result.lastInsertRowId };
+  } catch (error) {
+    console.error("❌ Error createCollection:", error);
+    return { success: false, error };
+  }
+};
+
+export const getCollectionsByUser = (userId) => {
+  try {
+    return db.getAllSync(
+      "SELECT * FROM collections WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
+  } catch (error) {
+    console.error("❌ Error getCollectionsByUser:", error);
+    return [];
+  }
+};
+
+export const renameCollection = (collectionId, newName) => {
+  try {
+    const res = db.runSync(
+      "UPDATE collections SET name = ? WHERE id = ?",
+      [newName.trim(), collectionId]
+    );
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error renameCollection:", error);
+    return false;
+  }
+};
+
+export const deleteCollectionById = (collectionId) => {
+  try {
+    const res = db.runSync("DELETE FROM collections WHERE id = ?", [collectionId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteCollectionById:", error);
+    return false;
+  }
+};
+
+export const addMovieToCollection = (collectionId, movieId) => {
+  try {
+    db.runSync(
+      "INSERT OR IGNORE INTO collection_items (collection_id, movie_id) VALUES (?, ?)",
+      [collectionId, movieId]
+    );
+    return true;
+  } catch (error) {
+    console.error("❌ Error addMovieToCollection:", error);
+    return false;
+  }
+};
+
+export const removeMovieFromCollection = (collectionId, movieId) => {
+  try {
+    const res = db.runSync(
+      "DELETE FROM collection_items WHERE collection_id = ? AND movie_id = ?",
+      [collectionId, movieId]
+    );
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error removeMovieFromCollection:", error);
+    return false;
+  }
+};
+
+export const getCollectionMovies = (collectionId) => {
+  try {
+    return db.getAllSync(
+      `SELECT m.*
+       FROM collection_items ci
+       JOIN movies m ON m.id = ci.movie_id
+       WHERE ci.collection_id = ?
+       ORDER BY m.title ASC`,
+      [collectionId]
+    );
+  } catch (error) {
+    console.error("❌ Error getCollectionMovies:", error);
+    return [];
+  }
+};
+
+// ============================================
+// REVIEWS – UC-29 Moderation
+// ============================================
+
+export const addReview = (movieId, userId, content) => {
+  try {
+    const result = db.runSync(
+      "INSERT INTO reviews (movie_id, user_id, content, status) VALUES (?, ?, ?, 'pending')",
+      [movieId, userId, content.trim()]
+    );
+    return { success: true, id: result.lastInsertRowId };
+  } catch (error) {
+    console.error("❌ Error addReview:", error);
+    return { success: false, error };
+  }
+};
+
+export const getReviewsByMovie = (movieId, includePending = false) => {
+  try {
+    if (includePending) {
+      return db.getAllSync(
+        "SELECT * FROM reviews WHERE movie_id = ? ORDER BY created_at DESC",
+        [movieId]
+      );
+    }
+    return db.getAllSync(
+      "SELECT * FROM reviews WHERE movie_id = ? AND status = 'approved' ORDER BY created_at DESC",
+      [movieId]
+    );
+  } catch (error) {
+    console.error("❌ Error getReviewsByMovie:", error);
+    return [];
+  }
+};
+
+export const listPendingOrReportedReviews = () => {
+  try {
+    return db.getAllSync(
+      `SELECT r.*, m.title AS movie_title, a.email AS user_email
+       FROM reviews r
+       JOIN movies m ON m.id = r.movie_id
+       JOIN account a ON a.id = r.user_id
+       WHERE r.status = 'pending'
+       ORDER BY r.created_at DESC`
+    );
+  } catch (error) {
+    console.error("❌ Error listPendingOrReportedReviews:", error);
+    return [];
+  }
+};
+
+export const approveReview = (reviewId) => {
+  try {
+    const res = db.runSync("UPDATE reviews SET status = 'approved' WHERE id = ?", [reviewId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error approveReview:", error);
+    return false;
+  }
+};
+
+export const deleteReviewById = (reviewId) => {
+  try {
+    const res = db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteReviewById:", error);
+    return false;
+  }
+};
 
 // ============================================
 // ACCOUNT HELPER FUNCTIONS (No hashing)
@@ -495,6 +869,278 @@ export const getWishlistByAccount = (userId) => {
     return wishlist || [];
   } catch (error) {
     console.error("❌ Error getWishlistByAccount:", error);
+// Force reset và seed lại cinemas
+export const resetAndSeedCinemas = () => {
+  try {
+    console.log("🔄 Resetting cinemas table...");
+    db.runSync("DELETE FROM cinemas");
+    console.log("✅ Cleared all cinemas");
+    seedCinemasCanTho();
+  } catch (error) {
+    console.error("❌ Error resetting cinemas:", error);
+  }
+};
+
+// Seed cinemas data cho Cần Thơ
+export const seedCinemasCanTho = () => {
+  try {
+    const existingCinemas = db.getAllSync("SELECT COUNT(*) as count FROM cinemas");
+    console.log("🔍 Checking existing cinemas:", existingCinemas);
+    
+    if (existingCinemas[0].count > 0) {
+      console.log("✅ Cinemas already seeded, count:", existingCinemas[0].count);
+      return;
+    }
+
+    console.log("🌱 Starting to seed cinemas for Cần Thơ...");
+
+    // Dựa vào ảnh Google Maps của bạn
+    const cinemas = [
+      {
+        name: "Lotte Cinema Ninh Kiều",
+        address: "Tầng 3 TTTM Lotte Mart, 84 Đ. Mậu Thân, Ninh Kiều, Cần Thơ",
+        latitude: 10.0340,
+        longitude: 105.7680,
+        phone: "0292 3696 898",
+        openingHours: "9:00 - 23:00",
+        website: "https://www.lottecinemavn.com",
+        totalScreens: 6,
+        facilities: "3D, 4DX, Dolby Atmos"
+      },
+      {
+        name: "CGV Vincom Xuân Khánh",
+        address: "209 Đ. 30 Tháng 4, Xuân Khánh, Ninh Kiều, Cần Thơ",
+        latitude: 10.0365,
+        longitude: 105.7590,
+        phone: "1900 6017",
+        openingHours: "8:00 - 24:00",
+        website: "https://www.cgv.vn",
+        totalScreens: 5,
+        facilities: "3D, IMAX, Sweetbox"
+      },
+      {
+        name: "CGV Sense City Cần Thơ",
+        address: "Sense City, 1 Đ. Hoà Bình, An Hòa, Ninh Kiều, Cần Thơ",
+        latitude: 10.0450,
+        longitude: 105.7620,
+        phone: "1900 6017",
+        openingHours: "8:00 - 24:00",
+        website: "https://www.cgv.vn",
+        totalScreens: 7,
+        facilities: "3D, 4DX, ScreenX, Sweetbox"
+      },
+      {
+        name: "CGV Vincom Hùng Vương",
+        address: "Vincom Plaza Hùng Vương, Hùng Vương, An Hòa, Ninh Kiều, Cần Thơ",
+        latitude: 10.0420,
+        longitude: 105.7720,
+        phone: "1900 6017",
+        openingHours: "8:00 - 24:00",
+        website: "https://www.cgv.vn",
+        totalScreens: 5,
+        facilities: "3D, Sweetbox, Gold Class"
+      },
+      {
+        name: "Lotte Cinema Cần Thơ Cái Răng",
+        address: "TTTM Sense Market, Cái Răng, Cần Thơ",
+        latitude: 10.0290,
+        longitude: 105.7850,
+        phone: "0292 3696 888",
+        openingHours: "9:00 - 23:00",
+        website: "https://www.lottecinemavn.com",
+        totalScreens: 4,
+        facilities: "3D, Dolby Atmos"
+      },
+      {
+        name: "Mega GS Cinemas Cần Thơ",
+        address: "Vincom Plaza Xuân Khánh, Ninh Kiều, Cần Thơ",
+        latitude: 10.0380,
+        longitude: 105.7600,
+        phone: "1900 2099",
+        openingHours: "9:00 - 23:30",
+        website: "https://www.megagscinemas.vn",
+        totalScreens: 5,
+        facilities: "3D, 4K Digital"
+      }
+    ];
+
+    // Insert trực tiếp vào database
+    cinemas.forEach((cinema, index) => {
+      console.log(`🎬 Adding cinema ${index + 1}:`, cinema.name);
+      try {
+        const result = db.runSync(
+          `INSERT INTO cinemas (name, address, latitude, longitude, phone, opening_hours, website, total_screens, facilities) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [cinema.name, cinema.address, cinema.latitude, cinema.longitude, cinema.phone, cinema.openingHours, cinema.website, cinema.totalScreens, cinema.facilities]
+        );
+        console.log(`   ✅ Added with ID: ${result.lastInsertRowId}`);
+      } catch (err) {
+        console.error(`   ❌ Error adding ${cinema.name}:`, err);
+      }
+    });
+
+    console.log("✅ Seeded 6 cinemas in Cần Thơ");
+  } catch (error) {
+    console.error("❌ Error seeding cinemas:", error);
+  }
+};
+
+// ============================================
+// CINEMAS CRUD OPERATIONS
+// ============================================
+
+// Thêm rạp mới
+export const addCinema = (name, address, latitude, longitude, phone = null, openingHours = null, website = null, totalScreens = 0, facilities = null) => {
+  try {
+    const result = db.runSync(
+      `INSERT INTO cinemas (name, address, latitude, longitude, phone, opening_hours, website, total_screens, facilities) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, address, latitude, longitude, phone, openingHours, website, totalScreens, facilities]
+    );
+    console.log("✅ Cinema added with ID:", result.lastInsertRowId);
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("❌ Error addCinema:", error);
+    return null;
+  }
+};
+
+// Lấy tất cả rạp
+export const getAllCinemas = () => {
+  try {
+    return db.getAllSync("SELECT * FROM cinemas ORDER BY name");
+  } catch (error) {
+    console.error("❌ Error getAllCinemas:", error);
+    return [];
+  }
+};
+
+// Lấy rạp theo ID
+export const getCinemaById = (id) => {
+  try {
+    return db.getFirstSync("SELECT * FROM cinemas WHERE id = ?", [id]);
+  } catch (error) {
+    console.error("❌ Error getCinemaById:", error);
+    return null;
+  }
+};
+
+// Tìm rạp gần vị trí (trong bán kính km)
+export const findNearbyCinemas = (latitude, longitude, radiusKm = 10) => {
+  try {
+    // Haversine formula approximation trong SQLite
+    // 111.045 km = 1 degree latitude
+    const allCinemas = db.getAllSync("SELECT * FROM cinemas");
+    
+    return allCinemas
+      .map(cinema => {
+        const latDiff = cinema.latitude - latitude;
+        const lonDiff = cinema.longitude - longitude;
+        const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) * 111.045;
+        return { ...cinema, distance };
+      })
+      .filter(cinema => cinema.distance <= radiusKm)
+      .sort((a, b) => a.distance - b.distance);
+  } catch (error) {
+    console.error("❌ Error findNearbyCinemas:", error);
+    return [];
+  }
+};
+
+// Cập nhật rạp
+export const updateCinema = (id, name, address, latitude, longitude, phone, openingHours, website, totalScreens, facilities) => {
+  try {
+    const result = db.runSync(
+      `UPDATE cinemas 
+       SET name = ?, address = ?, latitude = ?, longitude = ?, phone = ?, 
+           opening_hours = ?, website = ?, total_screens = ?, facilities = ?
+       WHERE id = ?`,
+      [name, address, latitude, longitude, phone, openingHours, website, totalScreens, facilities, id]
+    );
+    console.log("✅ Cinema updated, rows affected:", result.changes);
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error updateCinema:", error);
+    return false;
+  }
+};
+
+// Xóa rạp
+export const deleteCinema = (id) => {
+  try {
+    const result = db.runSync("DELETE FROM cinemas WHERE id = ?", [id]);
+    console.log("✅ Cinema deleted, rows affected:", result.changes);
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteCinema:", error);
+    return false;
+  }
+};
+
+// ============================================
+// SHOWTIMES CRUD OPERATIONS
+// ============================================
+
+// Thêm lịch chiếu mới
+export const addShowtime = (movieId, cinemaId, screenNumber, showDate, showTime, price = 0, availableSeats = 0, totalSeats = 0, language = "Vietnamese", subtitle = "Vietnamese") => {
+  try {
+    const result = db.runSync(
+      `INSERT INTO showtimes (movie_id, cinema_id, screen_number, show_date, show_time, price, available_seats, total_seats, language, subtitle)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [movieId, cinemaId, screenNumber, showDate, showTime, price, availableSeats, totalSeats, language, subtitle]
+    );
+    console.log("✅ Showtime added with ID:", result.lastInsertRowId);
+    return result.lastInsertRowId;
+  } catch (error) {
+    console.error("❌ Error addShowtime:", error);
+    return null;
+  }
+};
+
+// Lấy tất cả lịch chiếu
+export const getAllShowtimes = () => {
+  try {
+    return db.getAllSync(`
+      SELECT s.*, m.title as movie_title, c.name as cinema_name
+      FROM showtimes s
+      JOIN movies m ON s.movie_id = m.id
+      JOIN cinemas c ON s.cinema_id = c.id
+      ORDER BY s.show_date DESC, s.show_time DESC
+    `);
+  } catch (error) {
+    console.error("❌ Error getAllShowtimes:", error);
+    return [];
+  }
+};
+
+// Lấy lịch chiếu theo phim
+export const getShowtimesByMovie = (movieId) => {
+  try {
+    return db.getAllSync(`
+      SELECT s.*, c.name as cinema_name, c.address as cinema_address
+      FROM showtimes s
+      JOIN cinemas c ON s.cinema_id = c.id
+      WHERE s.movie_id = ?
+      ORDER BY s.show_date, s.show_time
+    `, [movieId]);
+  } catch (error) {
+    console.error("❌ Error getShowtimesByMovie:", error);
+    return [];
+  }
+};
+
+// Lấy lịch chiếu theo rạp
+export const getShowtimesByCinema = (cinemaId) => {
+  try {
+    return db.getAllSync(`
+      SELECT s.*, m.title as movie_title, m.poster_uri
+      FROM showtimes s
+      JOIN movies m ON s.movie_id = m.id
+      WHERE s.cinema_id = ?
+      ORDER BY s.show_date, s.show_time
+    `, [cinemaId]);
+  } catch (error) {
+    console.error("❌ Error getShowtimesByCinema:", error);
     return [];
   }
 };
@@ -508,12 +1154,118 @@ export const removeFromWishlistById = (wishlistId) => {
     return false;
   }
 };
+// Lấy lịch chiếu theo ngày
+export const getShowtimesByDate = (date) => {
+  try {
+    return db.getAllSync(`
+      SELECT s.*, m.title as movie_title, c.name as cinema_name
+      FROM showtimes s
+      JOIN movies m ON s.movie_id = m.id
+      JOIN cinemas c ON s.cinema_id = c.id
+      WHERE s.show_date = ?
+      ORDER BY s.show_time
+    `, [date]);
+  } catch (error) {
+    console.error("❌ Error getShowtimesByDate:", error);
+    return [];
+  }
+};
+
+// Cập nhật số ghế còn trống
+export const updateShowtimeSeats = (showtimeId, availableSeats) => {
+  try {
+    const result = db.runSync(
+      "UPDATE showtimes SET available_seats = ? WHERE id = ?",
+      [availableSeats, showtimeId]
+    );
+    console.log("✅ Showtime seats updated");
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error updateShowtimeSeats:", error);
+    return false;
+  }
+};
+
+// Xóa lịch chiếu
+export const deleteShowtime = (id) => {
+  try {
+    const result = db.runSync("DELETE FROM showtimes WHERE id = ?", [id]);
+    console.log("✅ Showtime deleted");
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteShowtime:", error);
+    return false;
+  }
+};
+
+// Seed dữ liệu mẫu cho cinemas
+export const seedSampleCinemas = () => {
+  const sampleCinemas = [
+    {
+      name: "CGV Vincom Center",
+      address: "72 Lê Thánh Tôn, Quận 1, TP.HCM",
+      latitude: 10.7769,
+      longitude: 106.7009,
+      phone: "1900 6017",
+      openingHours: "8:00 - 23:00",
+      website: "https://www.cgv.vn",
+      totalScreens: 8,
+      facilities: "IMAX, 4DX, Parking, Food Court"
+    },
+    {
+      name: "Lotte Cinema Diamond",
+      address: "34 Lê Duẩn, Quận 1, TP.HCM",
+      latitude: 10.7823,
+      longitude: 106.6991,
+      phone: "1900 5454",
+      openingHours: "8:30 - 23:30",
+      website: "https://www.lottecinemavn.com",
+      totalScreens: 12,
+      facilities: "4K, Dolby Atmos, Parking"
+    },
+    {
+      name: "Galaxy Cinema Nguyễn Du",
+      address: "116 Nguyễn Du, Quận 1, TP.HCM",
+      latitude: 10.7792,
+      longitude: 106.6945,
+      phone: "1900 2224",
+      openingHours: "9:00 - 23:00",
+      website: "https://www.galaxycine.vn",
+      totalScreens: 6,
+      facilities: "Screenx, Parking, Snack Bar"
+    }
+  ];
+
+  try {
+    const existingCinemas = getAllCinemas();
+    if (existingCinemas.length === 0) {
+      sampleCinemas.forEach(cinema => {
+        addCinema(
+          cinema.name,
+          cinema.address,
+          cinema.latitude,
+          cinema.longitude,
+          cinema.phone,
+          cinema.openingHours,
+          cinema.website,
+          cinema.totalScreens,
+          cinema.facilities
+        );
+      });
+      console.log("✅ Sample cinemas seeded");
+    }
+  } catch (error) {
+    console.error("❌ Error seeding cinemas:", error);
+  }
+};
+
 
 // ============================================
 // STEP 5: Auto-init on import
 // ============================================
 
 initDatabase();
+seedSampleCinemas();
 
 // ============================================
 // OPTIONAL TESTS (commented out)
