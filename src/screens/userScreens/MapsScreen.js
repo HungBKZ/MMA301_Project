@@ -3,8 +3,7 @@ import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, ActivityI
 import * as Location from "expo-location";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { colors } from "../../styles/commonStyles";
-import { generateText } from "../../services/geminiService";
-import { findNearbyCinemas as findNearbyCinemasDB, getAllCinemas, resetAndSeedCinemas } from "../../database/db";
+import { findNearbyCinemas as findNearbyCinemasDB } from "../../database/db";
 
 // Vị trí mặc định: Cần Thơ, Việt Nam
 const DEFAULT_LOCATION = {
@@ -15,7 +14,6 @@ const DEFAULT_LOCATION = {
 export default function MapsScreen() {
   const [loading, setLoading] = useState(false);
   const [cinemas, setCinemas] = useState([]);
-  const [aiSuggestion, setAiSuggestion] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [userLocation, setUserLocation] = useState(DEFAULT_LOCATION);
   const [locationError, setLocationError] = useState(false);
@@ -49,38 +47,6 @@ export default function MapsScreen() {
       console.log("Error getting location, using default:", error);
       setLocationError(true);
     }
-  };
-
-  // Debug: Kiểm tra database
-  const testDatabase = () => {
-    const allCinemas = getAllCinemas();
-    console.log("🗄️ All cinemas in database:", allCinemas);
-    console.log("🔢 Total cinemas:", allCinemas.length);
-    Alert.alert(
-      "Database Check", 
-      `Có ${allCinemas.length} rạp trong database.\n\n${allCinemas.map(c => `• ${c.name}`).join('\n')}`,
-      [{ text: "OK" }]
-    );
-  };
-
-  // Reset và seed lại database
-  const handleResetCinemas = () => {
-    Alert.alert(
-      "Reset Database",
-      "Xóa và tạo lại dữ liệu rạp Cần Thơ?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Reset",
-          style: "destructive",
-          onPress: () => {
-            resetAndSeedCinemas();
-            const count = getAllCinemas().length;
-            Alert.alert("Thành công", `Đã tạo ${count} rạp chiếu phim!`);
-          }
-        }
-      ]
-    );
   };
 
   const handleFindCinemas = async () => {
@@ -121,31 +87,6 @@ export default function MapsScreen() {
       }));
 
       setCinemas(formattedCinemas);
-
-      // Sử dụng Gemini AI để phân tích và đề xuất
-      const cinemaList = nearbyCinemas.map((c, idx) => 
-        `${idx + 1}. ${c.name}
-   Địa chỉ: ${c.address}
-   Khoảng cách: ${c.distance.toFixed(2)} km
-   Số phòng chiếu: ${c.total_screens}
-   Tiện ích: ${c.facilities || "Không có thông tin"}`
-      ).join("\n\n");
-
-      const prompt = `Bạn là trợ lý tìm rạp chiếu phim tại Cần Thơ. Dựa vào danh sách rạp dưới đây, hãy:
-1. Phân tích và giới thiệu 2-3 rạp gần nhất và tốt nhất
-2. So sánh các tiện ích và đặc điểm nổi bật
-3. Đưa ra lời khuyên ngắn gọn về cách di chuyển
-
-Vị trí người dùng: ${userLocation.latitude}, ${userLocation.longitude} (Cần Thơ)
-
-Danh sách rạp tìm được (đã sắp xếp theo khoảng cách):
-${cinemaList}
-
-Hãy trả lời bằng tiếng Việt, ngắn gọn, thân thiện và hữu ích (tối đa 150 từ).`;
-
-      const aiResponse = await generateText(prompt);
-      setAiSuggestion(aiResponse.text || "Không có gợi ý từ AI.");
-      
       setShowResults(true);
 
     } catch (error) {
@@ -233,28 +174,10 @@ Hãy trả lời bằng tiếng Việt, ngắn gọn, thân thiện và hữu í
 
       <View style={styles.buttonGroup}>
         <Button
-          title="Tim Rap Gan Day (AI)"
+          title="Tim Rap Gan Day"
           onPress={handleFindCinemas}
           color={colors.primary}
           disabled={loading}
-        />
-        <View style={{ height: 10 }} />
-        <Button
-          title="Reset & Tao Lai Rap"
-          onPress={handleResetCinemas}
-          color="#FF5722"
-        />
-        <View style={{ height: 10 }} />
-        <Button
-          title="Kiem Tra Database"
-          onPress={testDatabase}
-          color="#9C27B0"
-        />
-        <View style={{ height: 10 }} />
-        <Button
-          title="Lam Moi Vi Tri GPS"
-          onPress={getUserLocation}
-          color={colors.accent}
         />
       </View>
 
@@ -267,14 +190,6 @@ Hãy trả lời bằng tiếng Việt, ngắn gọn, thân thiện và hữu í
 
       {showResults && !loading && (
         <View style={styles.resultsContainer}>
-          {/* AI Suggestion */}
-          {aiSuggestion && (
-            <View style={styles.aiSuggestionBox}>
-              <Text style={styles.aiTitle}>🤖 Goi y tu AI:</Text>
-              <Text style={styles.aiText}>{aiSuggestion}</Text>
-            </View>
-          )}
-
           {/* Cinema List */}
           {cinemas.length > 0 && (
             <View style={styles.cinemaListContainer}>
@@ -406,25 +321,6 @@ const styles = StyleSheet.create({
   },
   resultsContainer: {
     padding: 16,
-  },
-  aiSuggestionBox: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  aiTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  aiText: {
-    fontSize: 15,
-    color: colors.textPrimary,
-    lineHeight: 22,
   },
   cinemaListContainer: {
     marginTop: 10,
