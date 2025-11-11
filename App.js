@@ -7,6 +7,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
+// Auth provider (compat shim)
+import { AuthProvider } from "./src/auth/AuthContext";
+
 // 🗄️ Import database (tự động tạo DB khi app khởi động)
 import "./src/database/db";
 
@@ -26,12 +29,9 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
-<<<<<<< HEAD
 import UpdateProfileScreen from "./src/screens/UpdateProfileScreen";
-=======
 import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
 import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
->>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
 
 // 📱 Import screens - User
 import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
@@ -58,21 +58,9 @@ function AuthStack() {
         component={RegisterScreen}
         options={{
           headerShown: true,
-<<<<<<< HEAD
           headerStyle: { backgroundColor: colors.surface, elevation: 4 },
           headerTintColor: colors.primary,
           headerTitleStyle: { fontWeight: "bold", color: colors.textPrimary },
-=======
-          headerStyle: {
-            backgroundColor: colors.surface,
-            elevation: 4,
-          },
-          headerTintColor: colors.primary,
-          headerTitleStyle: {
-            fontWeight: "bold",
-            color: colors.textPrimary,
-          },
->>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
           title: "Create Account",
         }}
       />
@@ -375,10 +363,7 @@ function AdminTabs({ userId, email }) {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-<<<<<<< HEAD
         initialParams={{ userId, email }}
-=======
->>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
         options={{
           title: "Profile",
           headerShown: true,
@@ -561,9 +546,6 @@ function UserTabs({ userId, email }) {
 // }
 
 
-/**
- * MainScreen wrapper: App không gọi DB, chỉ lựa tab theo role được truyền khi điều hướng từ screen (Login/Register)
- */
 function MainScreen({ route }) {
   const role = route?.params?.role || "user";
   const userId = route?.params?.userId;
@@ -575,14 +557,16 @@ function MainScreen({ route }) {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar style="dark" />
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Auth">
-        <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="Main" component={MainScreen} />
-        <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} options={{ title: "Cập nhật tài khoản" }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <StatusBar style="dark" />
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Auth">
+          <Stack.Screen name="Auth" component={AuthStack} />
+          <Stack.Screen name="Main" component={MainScreen} />
+          <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} options={{ title: "Cập nhật tài khoản" }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 

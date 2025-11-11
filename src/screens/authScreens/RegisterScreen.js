@@ -16,8 +16,10 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { addUser, getUserByEmail } from "../../database/accountDB";
+import { useAuth } from "../../auth/AuthContext";
 
 export default function RegisterScreen({ navigation }) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -92,8 +94,9 @@ export default function RegisterScreen({ navigation }) {
       const r = await addUser(email.trim(), password, name.trim() || null, avatarUri || null, "User");
       if (!r.success) { setErr("Đăng ký thất bại"); setLoading(false); return; }
       // fetch user to read role (default User)
-      const user = getUserByEmail(email.trim());
-      navigation.replace("Main", { role: user?.role || "user" });
+  const user = getUserByEmail(email.trim());
+  if (user) await login({ id: user.id, email: user.email, role: user.role });
+  navigation.replace("Main", { role: user?.role || "user", userId: user?.id, email: user?.email });
     } catch (e) {
       console.error("Register error:", e);
       setErr("Lỗi khi đăng ký.");

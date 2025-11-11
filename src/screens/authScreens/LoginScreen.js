@@ -5,10 +5,12 @@ import * as Google from "expo-auth-session/providers/google";
 import { colors } from "../../styles/commonStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { authenticate, upsertOAuthUser, getUserByEmail } from "../../database/accountDB";
+import { useAuth } from "../../auth/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ navigation }) {
+  const { login } = useAuth();
   const [email, setEmail] = useState("admin@gmail.com");
   const [password, setPassword] = useState("admin123");
   const [showPassword, setShowPassword] = useState(false); // Thêm state này
@@ -45,11 +47,12 @@ export default function LoginScreen({ navigation }) {
       if (!res.ok) throw new Error("Failed to fetch google profile");
       const profile = await res.json();
       const oauthId = profile.sub || profile.id;
-      const up = upsertOAuthUser("google", oauthId, profile.email, profile.name, profile.picture);
+      await upsertOAuthUser("google", oauthId, profile.email, profile.name, profile.picture);
       // read user from DB
       const user = getUserByEmail(profile.email);
       const role = user?.role || "user";
-      navigation.replace("Main", { role });
+      if (user) await login({ id: user.id, email: user.email, role: user.role });
+      navigation.replace("Main", { role, userId: user?.id, email: user?.email });
     } catch (e) {
       console.error("Google login error:", e);
       Alert.alert("Login failed", "Google login error");
@@ -71,7 +74,8 @@ const onLogin = async () => {
       return;
     }
     const user = r.user;
-    // Truyền email và id vào Main để các tab con dùng lại
+    // persist session and pass params into Main
+    await login({ id: user.id, email: user.email, role: user.role });
     navigation.replace("Main", { role: user.role || "user", userId: user.id, email: user.email });
   } catch (e) {
     console.error("Login error:", e);
