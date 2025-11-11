@@ -806,6 +806,16 @@ export const resetAndSeedCinemas = () => {
   }
 };
 
+export const deleteTableCinemas = () => {
+  try {
+    db.runSync("DROP TABLE IF EXISTS cinemas");
+    console.log("✅ Cinemas table deleted");
+  }
+  catch (error) {
+    console.error("❌ Error deleting cinemas table:", error);
+  }
+};
+
 // Seed cinemas data cho Cần Thơ
 export const seedCinemasCanTho = () => {
   try {
@@ -834,7 +844,7 @@ export const seedCinemasCanTho = () => {
       },
       {
         name: "CGV Vincom Xuân Khánh",
-        address: "209 Đ. 30 Tháng 4, Xuân Khánh, Ninh Kiều, Cần Thơ",
+        address: "Vincom Plaza Xuân Khánh, Ninh Kiều, Cần Thơ",
         latitude: 10.0365,
         longitude: 105.7590,
         phone: "1900 6017",
@@ -842,28 +852,6 @@ export const seedCinemasCanTho = () => {
         website: "https://www.cgv.vn",
         totalScreens: 5,
         facilities: "3D, IMAX, Sweetbox"
-      },
-      {
-        name: "CGV Sense City Cần Thơ",
-        address: "Sense City, 1 Đ. Hoà Bình, An Hòa, Ninh Kiều, Cần Thơ",
-        latitude: 10.0450,
-        longitude: 105.7620,
-        phone: "1900 6017",
-        openingHours: "8:00 - 24:00",
-        website: "https://www.cgv.vn",
-        totalScreens: 7,
-        facilities: "3D, 4DX, ScreenX, Sweetbox"
-      },
-      {
-        name: "CGV Vincom Hùng Vương",
-        address: "Vincom Plaza Hùng Vương, Hùng Vương, An Hòa, Ninh Kiều, Cần Thơ",
-        latitude: 10.0420,
-        longitude: 105.7720,
-        phone: "1900 6017",
-        openingHours: "8:00 - 24:00",
-        website: "https://www.cgv.vn",
-        totalScreens: 5,
-        facilities: "3D, Sweetbox, Gold Class"
       },
       {
         name: "Lotte Cinema Cần Thơ Cái Răng",
@@ -875,18 +863,41 @@ export const seedCinemasCanTho = () => {
         website: "https://www.lottecinemavn.com",
         totalScreens: 4,
         facilities: "3D, Dolby Atmos"
-      },
-      {
-        name: "Mega GS Cinemas Cần Thơ",
-        address: "Vincom Plaza Xuân Khánh, Ninh Kiều, Cần Thơ",
-        latitude: 10.0380,
-        longitude: 105.7600,
-        phone: "1900 2099",
-        openingHours: "9:00 - 23:30",
-        website: "https://www.megagscinemas.vn",
-        totalScreens: 5,
-        facilities: "3D, 4K Digital"
       }
+      ,
+      // {
+      //   name: "CGV Vincom Hùng Vương",
+      //   address: "Vincom Plaza Hùng Vương, Hùng Vương, An Hòa, Ninh Kiều, Cần Thơ",
+      //   latitude: 10.0420,
+      //   longitude: 105.7720,
+      //   phone: "1900 6017",
+      //   openingHours: "8:00 - 24:00",
+      //   website: "https://www.cgv.vn",
+      //   totalScreens: 5,
+      //   facilities: "3D, Sweetbox, Gold Class"
+      // },
+      // {
+      //   name: "Mega GS Cinemas Cần Thơ",
+      //   address: "Vincom Plaza Xuân Khánh, Ninh Kiều, Cần Thơ",
+      //   latitude: 10.0380,
+      //   longitude: 105.7600,
+      //   phone: "1900 2099",
+      //   openingHours: "9:00 - 23:30",
+      //   website: "https://www.megagscinemas.vn",
+      //   totalScreens: 5,
+      //   facilities: "3D, 4K Digital"
+      // },
+      // {
+      //   name: "CGV Sense City Cần Thơ",
+      //   address: "Sense City, 1 Đ. Hoà Bình, An Hòa, Ninh Kiều, Cần Thơ",
+      //   latitude: 10.0450,
+      //   longitude: 105.7620,
+      //   phone: "1900 6017",
+      //   openingHours: "8:00 - 24:00",
+      //   website: "https://www.cgv.vn",
+      //   totalScreens: 7,
+      //   facilities: "3D, 4DX, ScreenX, Sweetbox"
+      // }
     ];
 
     // Insert trực tiếp vào database
