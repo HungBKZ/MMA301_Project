@@ -26,7 +26,12 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
+<<<<<<< HEAD
 import UpdateProfileScreen from "./src/screens/UpdateProfileScreen";
+=======
+import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
+import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
+>>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
 
 // 📱 Import screens - User
 import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
@@ -34,6 +39,7 @@ import MapsScreen from "./src/screens/userScreens/MapsScreen";
 
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
+import WishListScreen from "./src/screens/WishListScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -52,9 +58,21 @@ function AuthStack() {
         component={RegisterScreen}
         options={{
           headerShown: true,
+<<<<<<< HEAD
           headerStyle: { backgroundColor: colors.surface, elevation: 4 },
           headerTintColor: colors.primary,
           headerTitleStyle: { fontWeight: "bold", color: colors.textPrimary },
+=======
+          headerStyle: {
+            backgroundColor: colors.surface,
+            elevation: 4,
+          },
+          headerTintColor: colors.primary,
+          headerTitleStyle: {
+            fontWeight: "bold",
+            color: colors.textPrimary,
+          },
+>>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
           title: "Create Account",
         }}
       />
@@ -141,6 +159,74 @@ function SearchStack() {
         name="Detail"
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function WishlistStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: {
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="WishListMain"
+        component={WishListScreen}
+        options={{ title: "Wishlist" }}
+      />
+      <Stack.Screen
+        name="Detail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+/**
+ * 📁 Collections Stack (User)
+ */
+function CollectionsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: {
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="CollectionsList"
+        component={CollectionsListScreen}
+        options={{ title: "Collections" }}
+      />
+      <Stack.Screen
+        name="CollectionDetail"
+        component={CollectionDetailScreen}
+        options={{ title: "Collection" }}
       />
     </Stack.Navigator>
   );
@@ -289,7 +375,10 @@ function AdminTabs({ userId, email }) {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+<<<<<<< HEAD
         initialParams={{ userId, email }}
+=======
+>>>>>>> 0eccd817b5e4cb3137db58a0049bb0855c8d5599
         options={{
           title: "Profile",
           headerShown: true,
@@ -324,15 +413,22 @@ function UserTabs({ userId, email }) {
             case "Home":
               iconName = focused ? "home" : "home-outline";
               break;
+            case "Collections":
+              iconName = focused ? "albums" : "albums-outline";
+              break;
             case "Maps":
               iconName = focused ? "map" : "map-outline";
               break;
             case "Search":
               iconName = focused ? "search" : "search-outline";
               break;
+            case "Wishlist":
+              iconName = focused ? "heart" : "heart-outline";
+              break;
             case "Profile":
               iconName = focused ? "person" : "person-outline";
               break;
+
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -370,6 +466,11 @@ function UserTabs({ userId, email }) {
         }}
       />
       <Tab.Screen
+        name="Collections"
+        component={CollectionsStack}
+        options={{ title: "Collections" }}
+      />
+      <Tab.Screen
         name="Maps"
         component={MapsScreen}
         options={{
@@ -387,6 +488,11 @@ function UserTabs({ userId, email }) {
         name="Search"
         component={SearchStack}
         options={{ title: "Search" }}
+      />
+      <Tab.Screen
+        name="Wishlist"
+        component={WishlistStack}
+        options={{ title: "Wishlist" }}
       />
       <Tab.Screen
         name="Profile"

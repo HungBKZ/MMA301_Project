@@ -32,6 +32,18 @@ export const initDatabase = async () => {
       );
     `);
 
+    db.execSync(`
+       CREATE TABLE IF NOT EXISTS wishlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, movie_id),
+        FOREIGN KEY(user_id) REFERENCES account(id),
+        FOREIGN KEY(movie_id) REFERENCES movies(id)
+      );
+    `);
+    console.log("✅ Database initialized successfully (including account table)");
     // 3. Bảng CINEMAS (Rạp chiếu phim)
     db.execSync(`
       CREATE TABLE IF NOT EXISTS cinemas (
@@ -71,11 +83,51 @@ export const initDatabase = async () => {
 
     console.log("✅ Database initialized successfully (movies, cinemas, showtimes)");
 
+    // 5. Bảng collections (bộ sưu tập cá nhân)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        created_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, name),
+        FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 6. Bảng collection_items (phim trong bộ sưu tập)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        PRIMARY KEY (collection_id, movie_id),
+        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
+      );
+    `);
+
+    // 7. Bảng reviews (đánh giá phim)
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        created_at DATETIME DEFAULT (datetime('now')),
+        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
+      );
+    `);
+
+    console.log("✅ Database initialized successfully (movies, account, cinemas, showtimes)");
+
     // Migration: Thêm duration_minutes và cập nhật status nếu chưa có
     migrateDatabase();
     await initAccountsTable();
     migrateAccountTable();
-    await seedAdminAccount();
+    await seedAdminAccount();    
     seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
   } catch (error) {
     console.error("❌ Error initializing database:", error);
@@ -111,6 +163,94 @@ const migrateDatabase = () => {
       WHERE status NOT IN ('COMING_SOON', 'SHOWING', 'ENDED')
     `);
     console.log("✅ Database migration completed");
+
+    // Ensure collections table and required columns exist
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        created_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, name)
+      )`);
+      const collectionsInfo = db.getAllSync("PRAGMA table_info(collections)");
+      const hasUserIdCol = collectionsInfo.some(col => col.name === "user_id");
+      const hasNameCol = collectionsInfo.some(col => col.name === "name");
+      const hasCreatedAtCol = collectionsInfo.some(col => col.name === "created_at");
+      if (!hasUserIdCol) {
+        console.log("🔄 Migrating: Adding collections.user_id");
+        db.execSync("ALTER TABLE collections ADD COLUMN user_id INTEGER");
+      }
+      if (!hasNameCol) {
+        console.log("🔄 Migrating: Adding collections.name");
+        db.execSync("ALTER TABLE collections ADD COLUMN name TEXT");
+      }
+      if (!hasCreatedAtCol) {
+        console.log("🔄 Migrating: Adding collections.created_at");
+        db.execSync("ALTER TABLE collections ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))");
+      }
+    } catch (e) {
+      console.error("❌ Migration error (collections):", e);
+    }
+
+    // Ensure collection_items table exists
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        PRIMARY KEY (collection_id, movie_id)
+      )`);
+      const ciInfo = db.getAllSync("PRAGMA table_info(collection_items)");
+      const hasCollectionId = ciInfo.some(col => col.name === "collection_id");
+      const hasMovieId = ciInfo.some(col => col.name === "movie_id");
+      const hasAddedAt = ciInfo.some(col => col.name === "added_at");
+      if (!hasCollectionId) {
+        console.log("🔄 Migrating: Adding collection_items.collection_id");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN collection_id INTEGER");
+      }
+      if (!hasMovieId) {
+        console.log("🔄 Migrating: Adding collection_items.movie_id");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN movie_id INTEGER");
+      }
+      if (!hasAddedAt) {
+        console.log("🔄 Migrating: Adding collection_items.added_at");
+        db.execSync("ALTER TABLE collection_items ADD COLUMN added_at DATETIME DEFAULT (datetime('now'))");
+      }
+    } catch (e) {
+      console.error("❌ Migration error (collection_items):", e);
+    }
+
+    // Ensure reviews table exists
+    try {
+      db.execSync(`CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        created_at DATETIME DEFAULT (datetime('now'))
+      )`);
+      const rvInfo = db.getAllSync("PRAGMA table_info(reviews)");
+      const cols = ["movie_id", "user_id", "content", "status", "created_at"];
+      cols.forEach((c) => {
+        const exists = rvInfo.some(col => col.name === c);
+        if (!exists) {
+          console.log(`🔄 Migrating: Adding reviews.${c}`);
+          if (c === "status") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+          } else if (c === "created_at") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))");
+          } else if (c === "content") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN content TEXT");
+          } else {
+            db.execSync(`ALTER TABLE reviews ADD COLUMN ${c} INTEGER`);
+          }
+        }
+      });
+    } catch (e) {
+      console.error("❌ Migration error (reviews):", e);
+    }
   } catch (error) {
     console.error("❌ Error migrating database:", error);
   }
@@ -428,6 +568,195 @@ export const deleteAllMovies = () => {
   }
 };
 
+// ============================================
+// COLLECTIONS – UC-24/25/26
+// ============================================
+
+export const createCollection = (userId, name) => {
+  try {
+    const result = db.runSync(
+      "INSERT INTO collections (user_id, name) VALUES (?, ?)",
+      [userId, name.trim()]
+    );
+    return { success: true, id: result.lastInsertRowId };
+  } catch (error) {
+    console.error("❌ Error createCollection:", error);
+    return { success: false, error };
+  }
+};
+
+export const getCollectionsByUser = (userId) => {
+  try {
+    return db.getAllSync(
+      "SELECT * FROM collections WHERE user_id = ? ORDER BY created_at DESC",
+      [userId]
+    );
+  } catch (error) {
+    console.error("❌ Error getCollectionsByUser:", error);
+    return [];
+  }
+};
+
+export const renameCollection = (collectionId, newName) => {
+  try {
+    const res = db.runSync(
+      "UPDATE collections SET name = ? WHERE id = ?",
+      [newName.trim(), collectionId]
+    );
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error renameCollection:", error);
+    return false;
+  }
+};
+
+export const deleteCollectionById = (collectionId) => {
+  try {
+    const res = db.runSync("DELETE FROM collections WHERE id = ?", [collectionId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteCollectionById:", error);
+    return false;
+  }
+};
+
+export const addMovieToCollection = (collectionId, movieId) => {
+  try {
+    db.runSync(
+      "INSERT OR IGNORE INTO collection_items (collection_id, movie_id) VALUES (?, ?)",
+      [collectionId, movieId]
+    );
+    return true;
+  } catch (error) {
+    console.error("❌ Error addMovieToCollection:", error);
+    return false;
+  }
+};
+
+export const removeMovieFromCollection = (collectionId, movieId) => {
+  try {
+    const res = db.runSync(
+      "DELETE FROM collection_items WHERE collection_id = ? AND movie_id = ?",
+      [collectionId, movieId]
+    );
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error removeMovieFromCollection:", error);
+    return false;
+  }
+};
+
+export const getCollectionMovies = (collectionId) => {
+  try {
+    return db.getAllSync(
+      `SELECT m.*
+       FROM collection_items ci
+       JOIN movies m ON m.id = ci.movie_id
+       WHERE ci.collection_id = ?
+       ORDER BY m.title ASC`,
+      [collectionId]
+    );
+  } catch (error) {
+    console.error("❌ Error getCollectionMovies:", error);
+    return [];
+  }
+};
+
+// ============================================
+// REVIEWS – UC-29 Moderation
+// ============================================
+
+export const addReview = (movieId, userId, content) => {
+  try {
+    const result = db.runSync(
+      "INSERT INTO reviews (movie_id, user_id, content, status) VALUES (?, ?, ?, 'pending')",
+      [movieId, userId, content.trim()]
+    );
+    return { success: true, id: result.lastInsertRowId };
+  } catch (error) {
+    console.error("❌ Error addReview:", error);
+    return { success: false, error };
+  }
+};
+
+export const getReviewsByMovie = (movieId, includePending = false) => {
+  try {
+    if (includePending) {
+      return db.getAllSync(
+        "SELECT * FROM reviews WHERE movie_id = ? ORDER BY created_at DESC",
+        [movieId]
+      );
+    }
+    return db.getAllSync(
+      "SELECT * FROM reviews WHERE movie_id = ? AND status = 'approved' ORDER BY created_at DESC",
+      [movieId]
+    );
+  } catch (error) {
+    console.error("❌ Error getReviewsByMovie:", error);
+    return [];
+  }
+};
+
+export const listPendingOrReportedReviews = () => {
+  try {
+    return db.getAllSync(
+      `SELECT r.*, m.title AS movie_title, a.email AS user_email
+       FROM reviews r
+       JOIN movies m ON m.id = r.movie_id
+       JOIN account a ON a.id = r.user_id
+       WHERE r.status = 'pending'
+       ORDER BY r.created_at DESC`
+    );
+  } catch (error) {
+    console.error("❌ Error listPendingOrReportedReviews:", error);
+    return [];
+  }
+};
+
+export const approveReview = (reviewId) => {
+  try {
+    const res = db.runSync("UPDATE reviews SET status = 'approved' WHERE id = ?", [reviewId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error approveReview:", error);
+    return false;
+  }
+};
+
+export const deleteReviewById = (reviewId) => {
+  try {
+    const res = db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
+    return res.changes > 0;
+  } catch (error) {
+    console.error("❌ Error deleteReviewById:", error);
+    return false;
+  }
+};
+
+export const addToWishlist = async (userId, movieId) => {
+  try {
+    db.runSync(
+      "INSERT INTO wishlist (user_id, movie_id) VALUES (?, ?)",
+      [userId, movieId]
+    );
+    console.log("✅ Added to wishlist successfully");
+  } catch (error) {
+    console.error("❌ Error addToWishlist:", error);
+  }
+};
+
+export const getWishlistByAccount = (userId) => {
+  try {
+    const wishlist = db.getAllSync(
+      "SELECT * FROM wishlist WHERE user_id = ?",
+      [userId]
+    );
+    return wishlist || [];
+  } catch (error) {
+    console.error("❌ Error getWishlistByAccount:", error);
+  }
+}
+
 // Force reset và seed lại cinemas
 export const resetAndSeedCinemas = () => {
   try {
@@ -704,6 +1033,15 @@ export const getShowtimesByCinema = (cinemaId) => {
   }
 };
 
+export const removeFromWishlistById = (wishlistId) => {
+  try {
+    const result = db.runSync("DELETE FROM wishlist WHERE id = ?", [wishlistId]);
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error removeFromWishlistById:", error);
+    return false;
+  }
+};
 // Lấy lịch chiếu theo ngày
 export const getShowtimesByDate = (date) => {
   try {

@@ -89,6 +89,7 @@ const HomeScreen = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         contentContainerStyle={movies.length === 0 && styles.emptyList}
+
       />
 
       {/* Floating Action Button */}

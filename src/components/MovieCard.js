@@ -1,9 +1,34 @@
 import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../styles/commonStyles";
+import { addToWishlist, getWishlistByAccount } from "../database/db";
+import * as SecureStore from "expo-secure-store";
+import { useAuth } from "../auth/AuthContext";
 
 const MovieCard = ({ movie, onPress, onDelete }) => {
+  const { user } = useAuth();
+
+  const handleAddToWishlist = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in.');
+      return;
+    }
+    try {
+      const existing = await getWishlistByAccount(user.id);
+      const isMovieInWishlist = existing.some(item => item.movie_id === movie.id);
+
+      if (isMovieInWishlist) {
+        Alert.alert('Error', 'This movie is already in your wishlist.');
+        return;
+      }
+      await addToWishlist(user.id, movie.id);
+      Alert.alert('Success', 'Added to wishlist!');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Cannot add to wishlist.');
+    }
+  };
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.cardContent}>
@@ -26,9 +51,12 @@ const MovieCard = ({ movie, onPress, onDelete }) => {
           <View style={[styles.statusBadge, getStatusStyle(movie.status)]}>
             <Text style={styles.statusText}>{movie.status}</Text>
           </View>
+          <TouchableOpacity style={styles.button} onPress={handleAddToWishlist}>
+            <Ionicons name="heart-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+
         </View>
 
-        {/* Delete Button */}
         {onDelete && (
           <TouchableOpacity
             style={styles.deleteButton}
@@ -119,6 +147,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
   },
+  button: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -15 }],
+    padding: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  }
 });
 
 export default MovieCard;
