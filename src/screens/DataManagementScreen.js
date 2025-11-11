@@ -28,7 +28,7 @@ const DataManagementScreen = () => {
     try {
       setIsLoading(true);
       console.log("Starting export...");
-      
+
       const moviesData = exportMoviesData();
       console.log("Exported movies count:", moviesData.length);
 
@@ -52,7 +52,7 @@ const DataManagementScreen = () => {
 
       const canShare = await Sharing.isAvailableAsync();
       console.log("Can share:", canShare);
-      
+
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: "application/json",
@@ -145,12 +145,12 @@ const DataManagementScreen = () => {
     try {
       setIsLoading(true);
       console.log("Performing import with overwrite:", overwrite);
-      
+
       const result = importMoviesData(moviesData, overwrite);
       console.log("Import result:", result);
-      
+
       const message = `Import completed!\n\nSuccessfully imported: ${result.success}\nFailed: ${result.failed}\nSkipped: ${result.skipped}`;
-      
+
       Alert.alert("Import Complete", message, [
         {
           text: "OK",
@@ -203,7 +203,7 @@ const DataManagementScreen = () => {
     try {
       setIsLoading(true);
       console.log("Creating sample template...");
-      
+
       const templateData = createSampleData();
       const fileName = "movies_template.json";
       const fileUri = FileSystem.documentDirectory + fileName;
@@ -214,7 +214,7 @@ const DataManagementScreen = () => {
 
       const canShare = await Sharing.isAvailableAsync();
       console.log("Can share template:", canShare);
-      
+
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: "application/json",

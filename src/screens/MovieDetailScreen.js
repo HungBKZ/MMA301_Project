@@ -27,6 +27,7 @@ import {
 } from "../database/db";
 import { colors, commonStyles } from "../styles/commonStyles";
 import { useAuth } from "../auth/AuthContext";
+import { getAllShowtimes, getShowtimeById, getShowtimesByMovieId } from "../database/showtimeDB";
 
 /**
  * MovieDetailScreen - Task 3: Movie Detail Screen
@@ -242,6 +243,20 @@ const MovieDetailScreen = ({ route, navigation }) => {
         },
       ]
     );
+  };
+
+  /** Đi tới màn hình chọn suất chiếu (Booking) */
+  const handleBooking = () => {
+    try {
+      // chuyển sang màn hình Showtime để chọn ngày/rap/suất
+      // Navigate directly to the Showtime screen (registered in HomeStack)
+      navigation.navigate("Showtime", {
+        movieId: movie.id,
+        movieTitle: movie.title,
+      });
+    } catch (err) {
+      Alert.alert("Error", "Cannot open showtime screen");
+    }
   };
 
   // Loading
@@ -542,6 +557,16 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 <Ionicons name="albums" size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
               </TouchableOpacity>
+              {/* spacers to keep the same width as other buttons */}
+              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
+              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
+
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.accent }]}
+                onPress={handleBooking}
+              >
+                <Ionicons name="airplane" size={20} color="#FFFFFF" />
+                <Text style={styles.editButtonText}>Booking</Text>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.primary }]}
                 onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}

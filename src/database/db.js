@@ -6,6 +6,10 @@
 
 import * as SQLite from "expo-sqlite";
 import * as SecureStore from "expo-secure-store"; // Dùng để import trong authService
+import { seedDefaultShowtimes, initShowtimesTable, isShowtimeSeeded, getAllShowtimes, ensureShowtimesSeeded, getShowtimesCount } from "./showtimeDB";
+import { seedDefaultSeats, initSeatsTable } from "./seatDB";
+import { seedBookingsAndTickets } from "./bookingDB";
+import { seedDefaultRooms, initRoomsTable } from "./roomDB";
 
 // ============================================
 // STEP 0: Open database connection
@@ -32,6 +36,23 @@ export const initDatabase = async () => {
       );
     `);
 
+    // 2. Bảng account (SỬ DỤNG PASSWORD PLAIN TEXT - THEO YÊU CẦU)
+//     db.execSync(`
+//       CREATE TABLE IF NOT EXISTS account (
+//         id INTEGER PRIMARY KEY AUTOINCREMENT,
+//         email TEXT NOT NULL UNIQUE,
+//         password TEXT,             
+//         name TEXT,
+//         avatar_uri TEXT,
+//         role TEXT DEFAULT 'User', 
+//         oauth_provider TEXT,
+//         oauth_id TEXT,
+//         oauth_profile TEXT,
+//         created_at DATETIME DEFAULT (datetime('now'))
+//       );
+//     `);
+
+    // Bảng wishlist (phim yêu thích)
     db.execSync(`
        CREATE TABLE IF NOT EXISTS wishlist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,28 +81,6 @@ export const initDatabase = async () => {
         created_at DATETIME DEFAULT (datetime('now'))
       );
     `);
-
-    // 4. Bảng SHOWTIMES (Lịch chiếu phim)
-    db.execSync(`
-      CREATE TABLE IF NOT EXISTS showtimes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        movie_id INTEGER NOT NULL,
-        cinema_id INTEGER NOT NULL,
-        screen_number INTEGER,
-        show_date TEXT NOT NULL,
-        show_time TEXT NOT NULL,
-        price REAL DEFAULT 0,
-        available_seats INTEGER DEFAULT 0,
-        total_seats INTEGER DEFAULT 0,
-        language TEXT DEFAULT 'Vietnamese',
-        subtitle TEXT DEFAULT 'Vietnamese',
-        created_at DATETIME DEFAULT (datetime('now')),
-        FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
-        FOREIGN KEY (cinema_id) REFERENCES cinemas(id) ON DELETE CASCADE
-      );
-    `);
-
-    console.log("✅ Database initialized successfully (movies, cinemas, showtimes)");
 
     // 5. Bảng collections (bộ sưu tập cá nhân)
     db.execSync(`
@@ -120,14 +119,46 @@ export const initDatabase = async () => {
       );
     `);
 
-    console.log("✅ Database initialized successfully (movies, account, cinemas, showtimes)");
+    console.log("✅ Database initialized successfully (movies, account, cinemas)");
 
     // Migration: Thêm duration_minutes và cập nhật status nếu chưa có
     migrateDatabase();
+
+    // Khởi tạo các bảng phụ thuộc (rooms, seats, showtimes) trước khi seed
+    initRoomsTable();
+    initSeatsTable();
+    initShowtimesTable();
+
+    seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
     await initAccountsTable();
     migrateAccountTable();
     await seedAdminAccount();    
     seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
+    seedDefaultRooms(); // Tạo dữ liệu phòng chiếu mặc định
+    seedDefaultSeats(); // Tạo dữ liệu ghế ngồi mặc định
+    // Seed phim mẫu để đảm bảo các movie_id trong defaultShowtimes tồn tại
+    // Chỉ seed showtimes nếu bảng trống
+    ensureShowtimesSeeded();
+    // In ra console nếu có dữ liệu suất chiếu
+    try {
+      const stCount = getShowtimesCount();
+      if (stCount > 0) {
+        console.log(`🎬 Showtimes available: ${stCount}`);
+        const sample = (getAllShowtimes() || []).slice(0, 5);
+        console.log("📋 Sample showtimes (first 5):", sample);
+      } else {
+        console.log("ℹ️ No showtimes found in table.");
+      }
+    } catch (e) {
+      console.warn("⚠️ Could not read showtimes for logging:", e);
+    }
+    // Seed bookings và tickets theo đúng thứ tự và đảm bảo bảng tồn tại
+    try {
+      const ok = seedBookingsAndTickets();
+      console.log(ok ? "✅ Seeded default bookings and tickets" : "⚠️ Failed to seed bookings/tickets");
+    } catch (e) {
+      console.error("❌ Error seeding bookings/tickets:", e);
+    }
   } catch (error) {
     console.error("❌ Error initializing database:", error);
   }
@@ -508,7 +539,7 @@ export const exportMoviesData = () => {
 
 // 4.2 Import from JSON (skip or overwrite duplicates)
 export const importMoviesData = (moviesData, overwrite = false) => {
-  let success = 0,
+  let success = 1,
     failed = 0,
     skipped = 0;
   try {
@@ -558,7 +589,7 @@ export const importMoviesData = (moviesData, overwrite = false) => {
 // 4.3 Delete all (testing helper)
 export const deleteAllMovies = () => {
   try {
-    db.runSync("DELETE FROM movies");
+    db.runSync("DROP TABLE IF EXISTS movies");
     console.log("✅ All movies deleted");
     return true;
   } catch (error) {
@@ -968,74 +999,7 @@ export const deleteCinema = (id) => {
   }
 };
 
-// ============================================
-// SHOWTIMES CRUD OPERATIONS
-// ============================================
-
-// Thêm lịch chiếu mới
-export const addShowtime = (movieId, cinemaId, screenNumber, showDate, showTime, price = 0, availableSeats = 0, totalSeats = 0, language = "Vietnamese", subtitle = "Vietnamese") => {
-  try {
-    const result = db.runSync(
-      `INSERT INTO showtimes (movie_id, cinema_id, screen_number, show_date, show_time, price, available_seats, total_seats, language, subtitle)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [movieId, cinemaId, screenNumber, showDate, showTime, price, availableSeats, totalSeats, language, subtitle]
-    );
-    console.log("✅ Showtime added with ID:", result.lastInsertRowId);
-    return result.lastInsertRowId;
-  } catch (error) {
-    console.error("❌ Error addShowtime:", error);
-    return null;
-  }
-};
-
-// Lấy tất cả lịch chiếu
-export const getAllShowtimes = () => {
-  try {
-    return db.getAllSync(`
-      SELECT s.*, m.title as movie_title, c.name as cinema_name
-      FROM showtimes s
-      JOIN movies m ON s.movie_id = m.id
-      JOIN cinemas c ON s.cinema_id = c.id
-      ORDER BY s.show_date DESC, s.show_time DESC
-    `);
-  } catch (error) {
-    console.error("❌ Error getAllShowtimes:", error);
-    return [];
-  }
-};
-
-// Lấy lịch chiếu theo phim
-export const getShowtimesByMovie = (movieId) => {
-  try {
-    return db.getAllSync(`
-      SELECT s.*, c.name as cinema_name, c.address as cinema_address
-      FROM showtimes s
-      JOIN cinemas c ON s.cinema_id = c.id
-      WHERE s.movie_id = ?
-      ORDER BY s.show_date, s.show_time
-    `, [movieId]);
-  } catch (error) {
-    console.error("❌ Error getShowtimesByMovie:", error);
-    return [];
-  }
-};
-
-// Lấy lịch chiếu theo rạp
-export const getShowtimesByCinema = (cinemaId) => {
-  try {
-    return db.getAllSync(`
-      SELECT s.*, m.title as movie_title, m.poster_uri
-      FROM showtimes s
-      JOIN movies m ON s.movie_id = m.id
-      WHERE s.cinema_id = ?
-      ORDER BY s.show_date, s.show_time
-    `, [cinemaId]);
-  } catch (error) {
-    console.error("❌ Error getShowtimesByCinema:", error);
-    return [];
-  }
-};
-
+// Xóa mục yêu thích theo ID
 export const removeFromWishlistById = (wishlistId) => {
   try {
     const result = db.runSync("DELETE FROM wishlist WHERE id = ?", [wishlistId]);
@@ -1045,49 +1009,49 @@ export const removeFromWishlistById = (wishlistId) => {
     return false;
   }
 };
-// Lấy lịch chiếu theo ngày
-export const getShowtimesByDate = (date) => {
-  try {
-    return db.getAllSync(`
-      SELECT s.*, m.title as movie_title, c.name as cinema_name
-      FROM showtimes s
-      JOIN movies m ON s.movie_id = m.id
-      JOIN cinemas c ON s.cinema_id = c.id
-      WHERE s.show_date = ?
-      ORDER BY s.show_time
-    `, [date]);
-  } catch (error) {
-    console.error("❌ Error getShowtimesByDate:", error);
-    return [];
-  }
-};
+// // Lấy lịch chiếu theo ngày
+// export const getShowtimesByDate = (date) => {
+//   try {
+//     return db.getAllSync(`
+//       SELECT s.*, m.title as movie_title, c.name as cinema_name
+//       FROM showtimes s
+//       JOIN movies m ON s.movie_id = m.id
+//       JOIN cinemas c ON s.cinema_id = c.id
+//       WHERE s.show_date = ?
+//       ORDER BY s.show_time
+//     `, [date]);
+//   } catch (error) {
+//     console.error("❌ Error getShowtimesByDate:", error);
+//     return [];
+//   }
+// };
 
-// Cập nhật số ghế còn trống
-export const updateShowtimeSeats = (showtimeId, availableSeats) => {
-  try {
-    const result = db.runSync(
-      "UPDATE showtimes SET available_seats = ? WHERE id = ?",
-      [availableSeats, showtimeId]
-    );
-    console.log("✅ Showtime seats updated");
-    return result.changes > 0;
-  } catch (error) {
-    console.error("❌ Error updateShowtimeSeats:", error);
-    return false;
-  }
-};
+// // Cập nhật số ghế còn trống
+// export const updateShowtimeSeats = (showtimeId, availableSeats) => {
+//   try {
+//     const result = db.runSync(
+//       "UPDATE showtimes SET available_seats = ? WHERE id = ?",
+//       [availableSeats, showtimeId]
+//     );
+//     console.log("✅ Showtime seats updated");
+//     return result.changes > 0;
+//   } catch (error) {
+//     console.error("❌ Error updateShowtimeSeats:", error);
+//     return false;
+//   }
+// };
 
-// Xóa lịch chiếu
-export const deleteShowtime = (id) => {
-  try {
-    const result = db.runSync("DELETE FROM showtimes WHERE id = ?", [id]);
-    console.log("✅ Showtime deleted");
-    return result.changes > 0;
-  } catch (error) {
-    console.error("❌ Error deleteShowtime:", error);
-    return false;
-  }
-};
+// // Xóa lịch chiếu
+// export const deleteShowtime = (id) => {
+//   try {
+//     const result = db.runSync("DELETE FROM showtimes WHERE id = ?", [id]);
+//     console.log("✅ Showtime deleted");
+//     return result.changes > 0;
+//   } catch (error) {
+//     console.error("❌ Error deleteShowtime:", error);
+//     return false;
+//   }
+// };
 
 // Seed dữ liệu mẫu cho cinemas
 export const seedSampleCinemas = () => {
@@ -1160,6 +1124,7 @@ export const seedSampleCinemas = () => {
   await initDatabase();
   seedSampleCinemas();
 })();
+
 
 // ============================================
 // OPTIONAL TESTS (commented out)

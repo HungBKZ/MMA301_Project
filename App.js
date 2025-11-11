@@ -37,10 +37,13 @@ import CollectionDetailScreen from "./src/screens/collections/CollectionDetailSc
 // 📱 Import screens - User
 import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
 import MapsScreen from "./src/screens/userScreens/MapsScreen";
+import ShowtimeScreen from "./src/screens/ShowtimeScreen";
 
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
+import { dropShowtimesTable, seedDefaultShowtimes } from "./src/database/showtimeDB";
+import { deleteAllMovies } from "./src/database/db";
 import ReviewListScreen from "./src/screens/ReviewListScreen";
 
 // 🔧 Tạo navigators
@@ -114,6 +117,9 @@ function HomeStack() {
         options={{ title: "Movie Details" }}
       />
       <Stack.Screen
+        name="Showtime"
+        component={ShowtimeScreen}
+        options={{ title: "Showtimes" }}
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}
@@ -198,6 +204,9 @@ function SearchStack() {
         options={{ title: "Movie Details" }}
       />
       <Stack.Screen
+        name="Showtime"
+        component={ShowtimeScreen}
+        options={{ title: "Showtimes" }}
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}
