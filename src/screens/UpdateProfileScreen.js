@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+    ScrollView,
     View,
     TextInput,
     Text,
@@ -16,9 +17,11 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import { getUserById, getUserByEmail, updateUserProfile } from "../database/accountDB";
+import { useAuth } from "../auth/AuthContext";
 
 export default function UpdateProfileScreen({ navigation, route }) {
     const { userId, email } = route?.params || {};
+    const { user: authUser, login } = useAuth();
     const [initLoading, setInitLoading] = useState(true); // loading while fetching user
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState(null);
@@ -35,12 +38,15 @@ export default function UpdateProfileScreen({ navigation, route }) {
     useEffect(() => {
         (async () => {
             try {
+                // Resolve userId/email: prefer route params, fallback to AuthContext
+                const resolvedId = userId || authUser?.id;
+                const resolvedEmail = email || authUser?.email;
+
                 let user = null;
-                if (userId) {
-                    user = getUserById(userId);
-                } else if (email) {
-                    user = getUserByEmail(email);
-                } else {
+                if (resolvedId) {
+                    user = getUserById(resolvedId);
+                } else if (resolvedEmail) {
+                    user = getUserByEmail(resolvedEmail);
                 }
 
                 if (!user) {
@@ -61,7 +67,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 setInitLoading(false);
             }
         })();
-    }, [userId, email]);
+    }, [userId, email, authUser]);
 
     const pickImage = async () => {
         try {
@@ -96,36 +102,68 @@ export default function UpdateProfileScreen({ navigation, route }) {
         return age >= 13 && d < today;
     };
 
+    // ...existing code...
     const onUpdate = async () => {
         setErr(null);
-        if (!phone || !dateOfBirth) {
-            setErr("Vui lòng nhập số điện thoại và ngày sinh.");
-            return;
-        }
-        if (!isPhoneValid(phone.trim())) {
-            setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
-            return;
-        }
-        if (!isDobValid(dateOfBirth.trim())) {
-            setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
-            return;
-        }
-
         setLoading(true);
         try {
-            if (!userId) {
+            const resolvedId = userId || authUser?.id;
+            if (!resolvedId) {
                 setErr("Không xác định được tài khoản để cập nhật.");
                 setLoading(false);
                 return;
             }
-            const ok = updateUserProfile(userId, {
+
+            // Lấy dữ liệu hiện tại từ DB (fallback nếu form trống)
+            const existing = getUserById(resolvedId) || {};
+            const finalPhone = phone && phone.trim() ? phone.trim() : (existing.phone || "");
+            const finalDob = dateOfBirth && dateOfBirth.trim() ? dateOfBirth.trim() : (existing.date_of_birth || "");
+            const finalGender = gender && gender !== "" ? gender : (existing.gender || "");
+
+            // Nếu sau fallback vẫn thiếu -> bắt nhập
+            if (!finalPhone || !finalDob || !finalGender) {
+                setErr("Vui lòng nhập số điện thoại, ngày sinh và giới tính.");
+                setLoading(false);
+                return;
+            }
+
+            // Validate final values
+            if (!isPhoneValid(finalPhone)) {
+                setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
+                setLoading(false);
+                return;
+            }
+            if (!isDobValid(finalDob)) {
+                setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
+                setLoading(false);
+                return;
+            }
+
+            const ok = updateUserProfile(resolvedId, {
                 name: name.trim(),
                 avatar_uri: avatarUri || null,
-                phone: phone.trim(),
-                date_of_birth: dateOfBirth.trim(),
-                gender,
+                phone: finalPhone,
+                date_of_birth: finalDob,
+                gender: finalGender,
             });
+
             if (ok) {
+                // refresh auth context with updated profile fields
+                try {
+                    const fresh = getUserById(resolvedId);
+                    if (fresh) {
+                        await login({
+                            id: fresh.id,
+                            email: fresh.email,
+                            role: fresh.role,
+                            phone: fresh.phone,
+                            date_of_birth: fresh.date_of_birth,
+                            gender: fresh.gender,
+                        });
+                    }
+                } catch (e) {
+                    // non-fatal
+                }
                 Alert.alert("Thành công", "Cập nhật tài khoản thành công!", [
                     { text: "OK", onPress: () => navigation.goBack() },
                 ]);
@@ -149,7 +187,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
     }
 
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
             <Text style={styles.title}>Cập nhật tài khoản</Text>
             {err ? <Text style={styles.error}>{err}</Text> : null}
             <View style={styles.rowTop}>
@@ -245,12 +283,12 @@ export default function UpdateProfileScreen({ navigation, route }) {
             <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
                 <Text style={styles.cancelText}>Quay lại</Text>
             </TouchableOpacity>
-        </View>
+        </ScrollView>
     );
 }
 const INPUT_H = 40;
 const styles = StyleSheet.create({
-    container: { flex: 1, paddingHorizontal: 18, paddingTop: Platform.OS === "android" ? 24 : 36, backgroundColor: "#fff", justifyContent: "center" },
+    container: { flexGrow: 1, paddingHorizontal: 18, paddingTop: Platform.OS === "android" ? 24 : 36, backgroundColor: "#fff" },
     title: { fontSize: 24, fontWeight: "700", marginBottom: 18, color: colors.primary, textAlign: "center" },
     rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
     avatarBox: { width: 78, height: 78, borderRadius: 8, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", marginRight: 18 },

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, commonStyles } from "../styles/commonStyles";
 import { getUserByEmail, getUserById } from "../database/accountDB";
+import { useAuth } from "../auth/AuthContext";
 
 /**
  * Note: since there's no AuthContext, this ProfileScreen expects the app to navigate here
@@ -13,24 +14,31 @@ const ProfileScreen = ({ route, navigation }) => {
   const passedUserId = route?.params?.userId;
   const passedEmail = route?.params?.email;
   const [user, setUser] = useState(null);
+  // Call hooks at top-level of component
+  const { user: authUser, logout } = useAuth();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        if (passedUserId) {
-          const u = getUserById(passedUserId);
-          if (mounted) setUser(u);
-        } else if (passedEmail) {
-          const u = getUserByEmail(passedEmail);
-          if (mounted) setUser(u);
+        // Resolve which user to load: route param > auth context
+        const idToUse = passedUserId || authUser?.id;
+        const emailToUse = passedEmail || authUser?.email;
+
+        let u = null;
+        if (idToUse) {
+          u = getUserById(idToUse);
+        } else if (emailToUse) {
+          u = getUserByEmail(emailToUse);
         }
+
+        if (mounted) setUser(u);
       } catch (e) {
         console.error("Error loading profile:", e);
       }
     })();
     return () => (mounted = false);
-  }, [passedUserId, passedEmail]);
+  }, [passedUserId, passedEmail, authUser]);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -38,11 +46,13 @@ const ProfileScreen = ({ route, navigation }) => {
       {
         text: "Logout",
         style: "destructive",
-        onPress: () => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: "Auth" }],
-          });
+        onPress: async () => {
+          try {
+            await logout();
+            // After logout, AppNavigator will show AuthStack
+          } catch (e) {
+            console.error("Logout failed:", e);
+          }
         },
       },
     ]);
@@ -53,7 +63,11 @@ const ProfileScreen = ({ route, navigation }) => {
       <View style={styles.container}>
         <View style={styles.headerCard}>
           <View style={styles.avatarContainer}>
-            <Ionicons name={user?.role === "admin" ? "shield-checkmark" : "person"} size={60} color={colors.primary} />
+            {user?.avatar_uri ? (
+              <Image source={{ uri: user.avatar_uri }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons name={user?.role === "admin" ? "shield-checkmark" : "person"} size={60} color={colors.primary} />
+            )}
           </View>
           <Text style={styles.username}>{user?.name || user?.email || "User"}</Text>
           <View style={[styles.roleBadge, user?.role === "admin" ? styles.adminBadge : styles.userBadge]}>
@@ -135,6 +149,7 @@ const styles = StyleSheet.create({
   roleBadge: { paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 },
   adminBadge: { backgroundColor: colors.primary }, userBadge: { backgroundColor: colors.success },
   roleText: { color: "#FFF", fontSize: 12, fontWeight: "bold", letterSpacing: 1 },
+  avatarImage: { width: 100, height: 100, borderRadius: 50 },
   infoCard: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, borderWidth: 1, borderColor: colors.border },
   infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12 },
   infoContent: { flex: 1, marginLeft: 16 },

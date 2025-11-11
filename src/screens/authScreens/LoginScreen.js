@@ -51,8 +51,18 @@ export default function LoginScreen({ navigation }) {
       // read user from DB
       const user = getUserByEmail(profile.email);
       const role = user?.role || "user";
-      if (user) await login({ id: user.id, email: user.email, role: user.role });
-      navigation.replace("Main", { role, userId: user?.id, email: user?.email });
+      if (user) {
+        await login({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          date_of_birth: user.date_of_birth,
+          gender: user.gender,
+        });
+      }
+  // AuthProvider state is updated via login(); AppNavigator will switch to the
+  // appropriate tabs automatically. No explicit navigation.replace is needed.
     } catch (e) {
       console.error("Google login error:", e);
       Alert.alert("Login failed", "Google login error");
@@ -74,9 +84,16 @@ const onLogin = async () => {
       return;
     }
     const user = r.user;
-    // persist session and pass params into Main
-    await login({ id: user.id, email: user.email, role: user.role });
-    navigation.replace("Main", { role: user.role || "user", userId: user.id, email: user.email });
+    // persist session with full profile fields so Profile/Update screens can read them
+    await login({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      date_of_birth: user.date_of_birth,
+      gender: user.gender,
+    });
+  // Auth state updated above; AppNavigator will render the authenticated stacks.
   } catch (e) {
     console.error("Login error:", e);
     setErr("Lỗi đăng nhập.");

@@ -8,7 +8,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 
 // Auth provider (compat shim)
-import { AuthProvider } from "./src/auth/AuthContext";
+import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 
 // 🗄️ Import database (tự động tạo DB khi app khởi động)
 import "./src/database/db";
@@ -518,71 +518,55 @@ function UserTabs({ userId, email }) {
   );
 }
 
-// /**
-//  * 🎯 Main App Logic
-//  * Điều hướng dựa trên trạng thái đăng nhập
-//  */
-// function AppNavigator() {
-//   const { user, loading } = useAuth();
+/**
+ * 🎯 Main App Logic
+ * Điều hướng dựa trên trạng thái đăng nhập
+ */
+function AppNavigator() {
+  const { user, loading } = useAuth();
 
-//   if (loading) {
-//     return (
-//       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
-//         <ActivityIndicator size="large" color={colors.primary} />
-//         <Text style={{ marginTop: 16, color: colors.textPrimary }}>Loading...</Text>
-//       </View>
-//     );
-//   }
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 16, color: colors.textPrimary }}>Loading...</Text>
+      </View>
+    );
+  }
 
-//   // Chưa đăng nhập -> AuthStack
-//   if (!user) {
-//     return <AuthStack />;
-//   }
+  // Chưa đăng nhập -> AuthStack
+  if (!user) {
+    return <AuthStack />;
+  }
 
-//   // Đã đăng nhập -> Admin hoặc User tabs
-//   if (user.role === "admin") {
-//     return <AdminTabs />;
-//   }
-
-//   return <UserTabs />;
-// }
-
-// /**
-//  * 🌎 Main App Component
-//  */
-// export default function App() {
-//   return (
-//     <AuthProvider>
-//       <NavigationContainer>
-//         <StatusBar style="dark" />
-//         <AppNavigator />
-//       </NavigationContainer>
-//     </AuthProvider>
-//   );
-// }
-
-
-function MainScreen({ route }) {
-  const role = route?.params?.role || "user";
-  const userId = route?.params?.userId;
-  const email = route?.params?.email;
-
-  if (role === "admin") return <AdminTabs userId={userId} email={email} />;
-  return <UserTabs userId={userId} email={email} />;
+  // Đã đăng nhập -> Admin hoặc User tabs
+  // Wrap tabs inside a stack so we can navigate to screens like UpdateProfile
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs">
+        {() => (user.role === "admin" ? <AdminTabs /> : <UserTabs />)}
+      </Stack.Screen>
+      <Stack.Screen
+        name="UpdateProfile"
+        component={UpdateProfileScreen}
+        options={{ title: "Cập nhật tài khoản" }}
+      />
+    </Stack.Navigator>
+  );
 }
 
+/**
+ * 🌎 Main App Component
+ */
 export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer>
         <StatusBar style="dark" />
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Auth">
-          <Stack.Screen name="Auth" component={AuthStack} />
-          <Stack.Screen name="Main" component={MainScreen} />
-          <Stack.Screen name="UpdateProfile" component={UpdateProfileScreen} options={{ title: "Cập nhật tài khoản" }} />
-        </Stack.Navigator>
+        <AppNavigator />
       </NavigationContainer>
     </AuthProvider>
   );
 }
+
 

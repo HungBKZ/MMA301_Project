@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
+  ScrollView,
   TextInput,
   Text,
   StyleSheet,
@@ -91,12 +92,30 @@ export default function RegisterScreen({ navigation }) {
     try {
       const existing = getUserByEmail(email.trim());
       if (existing) { setErr("EMAIL_EXISTS"); setLoading(false); return; }
-      const r = await addUser(email.trim(), password, name.trim() || null, avatarUri || null, "User");
+      const r = await addUser(
+          email.trim(),
+          password,
+          name.trim() || null,
+          avatarUri || null,
+          "User",
+          phone.trim(),
+          dateOfBirth.trim(),
+          gender
+        );
       if (!r.success) { setErr("Đăng ký thất bại"); setLoading(false); return; }
       // fetch user to read role (default User)
   const user = getUserByEmail(email.trim());
-  if (user) await login({ id: user.id, email: user.email, role: user.role });
-  navigation.replace("Main", { role: user?.role || "user", userId: user?.id, email: user?.email });
+  if (user) {
+      await login({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        date_of_birth: user.date_of_birth,
+        gender: user.gender,
+      });
+  }
+  // AuthProvider state updated — AppNavigator will switch to MainTabs automatically.
     } catch (e) {
       console.error("Register error:", e);
       setErr("Lỗi khi đăng ký.");
@@ -106,7 +125,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Tạo tài khoản</Text>
       {err ? <Text style={styles.error}>{err}</Text> : null}
       <View style={styles.rowTop}>
@@ -176,13 +195,13 @@ export default function RegisterScreen({ navigation }) {
       <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
         <Text style={styles.cancelText}>Quay lại / Đăng nhập</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const INPUT_H = 40;
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 14, paddingTop: Platform.OS === "android" ? 14 : 26, backgroundColor: "#fff", justifyContent: "center" },
+  container: { flexGrow: 1, paddingHorizontal: 14, paddingTop: Platform.OS === "android" ? 14 : 26, backgroundColor: "#fff" },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 8, color: colors.primary },
   rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   avatarBox: { width: 78, height: 78, borderRadius: 8, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
