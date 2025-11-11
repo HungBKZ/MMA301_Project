@@ -45,6 +45,18 @@ export const initDatabase = () => {
         created_at DATETIME DEFAULT (datetime('now'))
       );
     `);
+    db.execSync(`
+       CREATE TABLE IF NOT EXISTS wishlist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        movie_id INTEGER NOT NULL,
+        added_at DATETIME DEFAULT (datetime('now')),
+        UNIQUE(user_id, movie_id),
+        FOREIGN KEY(user_id) REFERENCES account(id),
+        FOREIGN KEY(movie_id) REFERENCES movies(id)
+      );
+    `);
+    console.log("✅ Database initialized successfully (including account table)");
 
     // 3. Bảng CINEMAS (Rạp chiếu phim)
     db.execSync(`
@@ -812,15 +824,15 @@ export const upsertOAuthUser = (provider, oauthId, email, name = null, avatarUri
         [name, avatarUri, existing.id]
       );
       return { success: true, id: existing.id, created: false };
-    } 
-    
+    }
+
     // 2. Nếu chưa có, tạo mới
     const result = db.runSync(
       "INSERT INTO account (email, password, name, avatar_uri, role, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [email, null, name, avatarUri, "User", provider, oauthId]
     );
     return { success: true, id: result.lastInsertRowId, created: true };
-    
+
   } catch (error) {
     console.error("❌ Error upsertOAuthUser:", error);
     return { success: false, error };
@@ -836,6 +848,27 @@ export const seedAdminAccount = () => {
   }
 };
 
+export const addToWishlist = async (userId, movieId) => {
+  try {
+    db.runSync(
+      "INSERT INTO wishlist (user_id, movie_id) VALUES (?, ?)",
+      [userId, movieId]
+    );
+    console.log("✅ Added to wishlist successfully");
+  } catch (error) {
+    console.error("❌ Error addToWishlist:", error);
+  }
+};
+
+export const getWishlistByAccount = (userId) => {
+  try {
+    const wishlist = db.getAllSync(
+      "SELECT * FROM wishlist WHERE user_id = ?",
+      [userId]
+    );
+    return wishlist || [];
+  } catch (error) {
+    console.error("❌ Error getWishlistByAccount:", error);
 // Force reset và seed lại cinemas
 export const resetAndSeedCinemas = () => {
   try {
@@ -1112,6 +1145,15 @@ export const getShowtimesByCinema = (cinemaId) => {
   }
 };
 
+export const removeFromWishlistById = (wishlistId) => {
+  try {
+    const result = db.runSync("DELETE FROM wishlist WHERE id = ?", [wishlistId]);
+    return result.changes > 0;
+  } catch (error) {
+    console.error("❌ Error removeFromWishlistById:", error);
+    return false;
+  }
+};
 // Lấy lịch chiếu theo ngày
 export const getShowtimesByDate = (date) => {
   try {
