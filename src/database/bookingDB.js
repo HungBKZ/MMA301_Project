@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./connection";
 // ticketDB helpers will be used to seed tickets after bookings
 import { initTicketsTable, seedDefaultTickets } from "./ticketDB";
 

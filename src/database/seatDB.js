@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./connection";
 
 // Initialize seats table
 export const initSeatsTable = () => {

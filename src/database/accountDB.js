@@ -1,7 +1,5 @@
-import * as SQLite from "expo-sqlite";
+import { db } from "./connection";
 import * as Crypto from "expo-crypto";
-
-const db = SQLite.openDatabaseSync("moviesApp.db");
 
 // Initialize account table
 export const initAccountsTable = () => {
