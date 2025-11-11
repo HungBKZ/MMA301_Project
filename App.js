@@ -37,6 +37,7 @@ import MapsScreen from "./src/screens/userScreens/MapsScreen";
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
+import ReviewListScreen from "./src/screens/ReviewListScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -122,6 +123,11 @@ function HomeStack() {
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
       />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -159,6 +165,11 @@ function SearchStack() {
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
       />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -192,6 +203,11 @@ function WishlistStack() {
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
       />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -202,7 +218,7 @@ function CollectionsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { 
+        headerStyle: {
           backgroundColor: colors.surface,
           elevation: 4,
           shadowColor: colors.primary,
@@ -211,7 +227,7 @@ function CollectionsStack() {
           shadowRadius: 4,
         },
         headerTintColor: colors.primary,
-        headerTitleStyle: { 
+        headerTitleStyle: {
           fontWeight: "bold",
           color: colors.textPrimary,
         },
@@ -449,10 +465,10 @@ function UserTabs() {
       <Tab.Screen
         name="Home"
         component={UserHomeScreen}
-        options={{ 
+        options={{
           title: "Home",
           headerShown: true,
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: colors.surface,
             elevation: 4,
           },
@@ -468,10 +484,10 @@ function UserTabs() {
       <Tab.Screen
         name="Maps"
         component={MapsScreen}
-        options={{ 
+        options={{
           title: "Maps",
           headerShown: true,
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: colors.surface,
             elevation: 4,
           },
