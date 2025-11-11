@@ -133,6 +133,48 @@ function HomeStack() {
 }
 
 /**
+ * 🏠 User Home Stack Navigator
+ * Gồm: UserHome + Movie Detail
+ */
+function UserHomeStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: {
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="UserHomeMain"
+        component={UserHomeScreen}
+        options={{ title: "Home" }}
+      />
+      <Stack.Screen
+        name="MovieDetail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
  * Search Stack Navigator
  * Gồm: Search + Movie Detail
  */
@@ -464,16 +506,9 @@ function UserTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={UserHomeScreen}
+        component={UserHomeStack}
         options={{
           title: "Home",
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: colors.surface,
-            elevation: 4,
-          },
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontWeight: "bold" },
         }}
       />
       <Tab.Screen
