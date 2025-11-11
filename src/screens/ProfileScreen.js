@@ -58,6 +58,17 @@ const ProfileScreen = ({ route, navigation }) => {
     ]);
   };
 
+  const goChangePassword = () => {
+    // điều hướng lên navigator cha (AppNavigator) chứa màn ChangePassword
+    const parent = navigation.getParent?.();
+    if (parent) {
+      parent.navigate("ChangePassword");
+    } else {
+      // fallback: cố gắng navigate bình thường
+      navigation.navigate("ChangePassword");
+    }
+  };
+
   return (
     <ScrollView style={commonStyles.container}>
       <View style={styles.container}>
@@ -122,6 +133,12 @@ const ProfileScreen = ({ route, navigation }) => {
           >
             <Ionicons name="create-outline" size={24} color={colors.textPrimary} />
             <Text style={styles.actionText}>Cập nhật tài khoản</Text>
+            <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={goChangePassword}>
+            <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
+            <Text style={styles.actionText}>Đổi mật khẩu</Text>
             <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 
