@@ -58,8 +58,7 @@ const AddItemScreen = ({ navigation }) => {
     if (success) {
       Alert.alert(
         "Success",
-        `Added "${itemName}" to ${
-          status === "Wishlist" ? "wishlist" : "purchased items"
+        `Added "${itemName}" to ${status === "Wishlist" ? "wishlist" : "purchased items"
         }`,
         [
           {
