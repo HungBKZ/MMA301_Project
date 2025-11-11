@@ -6,6 +6,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+
+// Auth provider (compat shim)
 import { AuthProvider, useAuth } from "./src/auth/AuthContext";
 
 // 🗄️ Import database (tự động tạo DB khi app khởi động)
@@ -27,6 +29,8 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
+import UpdateProfileScreen from "./src/screens/UpdateProfileScreen";
+import ChangePasswordScreen from "./src/screens/ChangePasswordScreen";
 import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
 import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
 
@@ -40,6 +44,7 @@ import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
 import { dropShowtimesTable, seedDefaultShowtimes } from "./src/database/showtimeDB";
 import { deleteAllMovies } from "./src/database/db";
+import ReviewListScreen from "./src/screens/ReviewListScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -51,30 +56,16 @@ const Stack = createNativeStackNavigator();
  */
 function AuthStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ title: "Login" }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen
         name="Register"
         component={RegisterScreen}
         options={{
           headerShown: true,
-          headerStyle: {
-            backgroundColor: colors.surface,
-            elevation: 4,
-          },
+          headerStyle: { backgroundColor: colors.surface, elevation: 4 },
           headerTintColor: colors.primary,
-          headerTitleStyle: {
-            fontWeight: "bold",
-            color: colors.textPrimary,
-          },
+          headerTitleStyle: { fontWeight: "bold", color: colors.textPrimary },
           title: "Create Account",
         }}
       />
@@ -129,6 +120,51 @@ function HomeStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * 🏠 User Home Stack Navigator
+ * Gồm: UserHome + Movie Detail
+ */
+function UserHomeStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: {
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="UserHomeMain"
+        component={UserHomeScreen}
+        options={{ title: "Home" }}
+      />
+      <Stack.Screen
+        name="MovieDetail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
       />
     </Stack.Navigator>
   );
@@ -171,6 +207,9 @@ function SearchStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
       />
     </Stack.Navigator>
   );
@@ -204,6 +243,11 @@ function WishlistStack() {
         name="Detail"
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
       />
     </Stack.Navigator>
   );
@@ -285,7 +329,7 @@ function ReportsStack() {
  * � Admin Tab Navigator
  * Tất cả tính năng cho admin
  */
-function AdminTabs() {
+function AdminTabs({ userId, email }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -387,6 +431,7 @@ function AdminTabs() {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        initialParams={{ userId, email }}
         options={{
           title: "Profile",
           headerShown: true,
@@ -410,7 +455,7 @@ function AdminTabs() {
  * 👤 User Tab Navigator
  * Tính năng giới hạn cho user
  */
-function UserTabs() {
+function UserTabs({ userId, email }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -461,16 +506,9 @@ function UserTabs() {
     >
       <Tab.Screen
         name="Home"
-        component={UserHomeScreen}
+        component={UserHomeStack}
         options={{
           title: "Home",
-          headerShown: true,
-          headerStyle: {
-            backgroundColor: colors.surface,
-            elevation: 4,
-          },
-          headerTintColor: colors.primary,
-          headerTitleStyle: { fontWeight: "bold" },
         }}
       />
       <Tab.Screen
@@ -505,6 +543,7 @@ function UserTabs() {
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
+        initialParams={{ userId, email }}
         options={{
           title: "Profile",
           headerShown: true,
@@ -546,11 +585,24 @@ function AppNavigator() {
   }
 
   // Đã đăng nhập -> Admin hoặc User tabs
-  if (user.role === "admin") {
-    return <AdminTabs />;
-  }
-
-  return <UserTabs />;
+  // Wrap tabs inside a stack so we can navigate to screens like UpdateProfile
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs">
+        {() => (user.role === "admin" ? <AdminTabs /> : <UserTabs />)}
+      </Stack.Screen>
+      <Stack.Screen
+        name="UpdateProfile"
+        component={UpdateProfileScreen}
+        options={{ title: "Cập nhật tài khoản" }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: "Đổi mật khẩu" }}
+      />
+    </Stack.Navigator>
+  );
 }
 
 /**
@@ -566,3 +618,5 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+

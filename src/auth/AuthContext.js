@@ -1,63 +1,54 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import * as authService from "./authService";
-import { ActivityIndicator, View } from "react-native";
-import { colors } from "../styles/commonStyles"; // Cần import colors
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
 
-const AuthContext = createContext();
+// Lightweight AuthContext that restores a persisted session from SecureStore.
+// This lets legacy components that call `useAuth()` keep working while
+// the app transitions to passing userId via navigation or a central auth flow.
 
-export function AuthProvider({ children }) {
+const AuthContext = createContext({ user: null, loading: true, login: async () => {}, logout: async () => {} });
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Khởi tạo: Lấy user từ SecureStore
   useEffect(() => {
-    const checkUser = async () => {
+    (async () => {
       try {
-        const u = await authService.getCurrentUser();
-        setUser(u);
+        const raw = await SecureStore.getItemAsync('currentUser');
+        if (raw) setUser(JSON.parse(raw));
       } catch (e) {
-        console.error("Error loading session:", e);
-        setUser(null);
+        // ignore
       } finally {
         setLoading(false);
       }
-    };
-    checkUser();
+    })();
   }, []);
 
-  const login = async (email, password) => {
-    const r = await authService.login(email, password);
-    if (r.success) setUser(r.user);
-    return r;
+  const login = async (u) => {
+    try {
+      setUser(u);
+      await SecureStore.setItemAsync('currentUser', JSON.stringify(u));
+    } catch (e) {
+      console.warn('AuthProvider: failed to persist user', e);
+    }
   };
 
   const logout = async () => {
-    await authService.logout();
-    setUser(null);
+    try {
+      setUser(null);
+      await SecureStore.deleteItemAsync('currentUser');
+    } catch (e) {
+      console.warn('AuthProvider: failed to clear user', e);
+    }
   };
-
-  const register = async (data) => {
-    const r = await authService.register(data);
-    if (r.success) setUser(r.user);
-    return r;
-  };
-
-  // Nếu loading, hiển thị màn hình loading toàn cục
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);
+
+export default AuthContext;

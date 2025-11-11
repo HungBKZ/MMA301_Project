@@ -14,12 +14,14 @@ import { seedDefaultRooms, initRoomsTable } from "./roomDB";
 // ============================================
 // STEP 0: Open database connection
 // ============================================
-export const db = SQLite.openDatabaseSync("moviesApp.db");
+const db = SQLite.openDatabaseSync("moviesApp.db");
+import { initAccountsTable, seedAdminAccount, migrateAccountTable } from "./accountDB";
+
 
 // ============================================
 // STEP 1: Initialize Database (Create Tables)
 // ============================================
-export const initDatabase = () => {
+export const initDatabase = async () => {
   try {
     // 1. Bảng MOVIES
     db.execSync(`
@@ -35,20 +37,20 @@ export const initDatabase = () => {
     `);
 
     // 2. Bảng account (SỬ DỤNG PASSWORD PLAIN TEXT - THEO YÊU CẦU)
-    db.execSync(`
-      CREATE TABLE IF NOT EXISTS account (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT,             
-        name TEXT,
-        avatar_uri TEXT,
-        role TEXT DEFAULT 'User', 
-        oauth_provider TEXT,
-        oauth_id TEXT,
-        oauth_profile TEXT,
-        created_at DATETIME DEFAULT (datetime('now'))
-      );
-    `);
+//     db.execSync(`
+//       CREATE TABLE IF NOT EXISTS account (
+//         id INTEGER PRIMARY KEY AUTOINCREMENT,
+//         email TEXT NOT NULL UNIQUE,
+//         password TEXT,             
+//         name TEXT,
+//         avatar_uri TEXT,
+//         role TEXT DEFAULT 'User', 
+//         oauth_provider TEXT,
+//         oauth_id TEXT,
+//         oauth_profile TEXT,
+//         created_at DATETIME DEFAULT (datetime('now'))
+//       );
+//     `);
 
     // Bảng wishlist (phim yêu thích)
     db.execSync(`
@@ -63,7 +65,6 @@ export const initDatabase = () => {
       );
     `);
     console.log("✅ Database initialized successfully (including account table)");
-
     // 3. Bảng CINEMAS (Rạp chiếu phim)
     db.execSync(`
       CREATE TABLE IF NOT EXISTS cinemas (
@@ -112,7 +113,6 @@ export const initDatabase = () => {
         movie_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
         created_at DATETIME DEFAULT (datetime('now')),
         FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
@@ -130,6 +130,9 @@ export const initDatabase = () => {
     initShowtimesTable();
 
     seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
+    await initAccountsTable();
+    migrateAccountTable();
+    await seedAdminAccount();    
     seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
     seedDefaultRooms(); // Tạo dữ liệu phòng chiếu mặc định
     seedDefaultSeats(); // Tạo dữ liệu ghế ngồi mặc định
@@ -595,7 +598,6 @@ export const deleteAllMovies = () => {
   }
 };
 
-
 // ============================================
 // COLLECTIONS – UC-24/25/26
 // ============================================
@@ -697,7 +699,7 @@ export const getCollectionMovies = (collectionId) => {
 export const addReview = (movieId, userId, content) => {
   try {
     const result = db.runSync(
-      "INSERT INTO reviews (movie_id, user_id, content, status) VALUES (?, ?, ?, 'pending')",
+      "INSERT INTO reviews (movie_id, user_id, content) VALUES (?, ?, ?)",
       [movieId, userId, content.trim()]
     );
     return { success: true, id: result.lastInsertRowId };
@@ -707,17 +709,14 @@ export const addReview = (movieId, userId, content) => {
   }
 };
 
-export const getReviewsByMovie = (movieId, includePending = false) => {
+export const getReviewsByMovie = (movieId) => {
   try {
-    if (includePending) {
-      return db.getAllSync(
-        "SELECT * FROM reviews WHERE movie_id = ? ORDER BY created_at DESC",
-        [movieId]
-      );
-    }
     return db.getAllSync(
-      "SELECT * FROM reviews WHERE movie_id = ? AND status = 'approved' ORDER BY created_at DESC",
-      [movieId]
+      `SELECT r.*, a.name, a.avatar_uri
+        FROM reviews r 
+        LEFT JOIN account a ON r.user_id = a.id 
+        WHERE r.movie_id = ? 
+        ORDER BY r.created_at DESC`, [movieId]
     );
   } catch (error) {
     console.error("❌ Error getReviewsByMovie:", error);
@@ -725,144 +724,48 @@ export const getReviewsByMovie = (movieId, includePending = false) => {
   }
 };
 
-export const listPendingOrReportedReviews = () => {
+export const getUserReviewByUserId = (userId, movieId) => {
   try {
-    return db.getAllSync(
-      `SELECT r.*, m.title AS movie_title, a.email AS user_email
-       FROM reviews r
-       JOIN movies m ON m.id = r.movie_id
-       JOIN account a ON a.id = r.user_id
-       WHERE r.status = 'pending'
-       ORDER BY r.created_at DESC`
+    return db.getFirstSync(
+      `SELECT r.*, a.name, a.avatar_uri
+       FROM reviews r 
+       LEFT JOIN account a ON r.user_id = a.id 
+       WHERE r.user_id = ? AND r.movie_id = ?`,
+      [userId, movieId]
     );
   } catch (error) {
-    console.error("❌ Error listPendingOrReportedReviews:", error);
-    return [];
+    console.error("❌ Error getUserReviewForMovie:", error);
+    return null;
   }
 };
 
-export const approveReview = (reviewId) => {
+export const deleteReview = (reviewId) => {
   try {
-    const res = db.runSync("UPDATE reviews SET status = 'approved' WHERE id = ?", [reviewId]);
-    return res.changes > 0;
+    db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
+    return { success: true };
   } catch (error) {
-    console.error("❌ Error approveReview:", error);
-    return false;
-  }
-};
-
-export const deleteReviewById = (reviewId) => {
-  try {
-    const res = db.runSync("DELETE FROM reviews WHERE id = ?", [reviewId]);
-    return res.changes > 0;
-  } catch (error) {
-    console.error("❌ Error deleteReviewById:", error);
-    return false;
-  }
-};
-
-// ============================================
-// ACCOUNT HELPER FUNCTIONS (No hashing)
-// ============================================
-
-export const addUser = (email, password, name, avatar_uri, role = "user") => {
-  try {
-    const result = db.runSync(
-      "INSERT INTO account (email, password, name, avatar_uri, role) VALUES (?, ?, ?, ?, ?)",
-      [email, password, name, avatar_uri, role]
-    );
-    return { success: true, id: result.lastInsertRowId };
-  } catch (error) {
-    console.error("❌ Error addUser:", error);
+    console.error("❌ Error deleteReview:", error);
     return { success: false, error };
   }
 };
 
-export const getUserByEmail = (email) => {
+export const updateReview = (reviewId, content) => {
   try {
-    const user = db.getFirstSync("SELECT * FROM account WHERE email = ?", [email]);
-    return user || null;
-  } catch (error) {
-    console.error("❌ Error getUserByEmail:", error);
-    return null;
-  }
-};
-
-export const getUserById = (id) => {
-  try {
-    const user = db.getFirstSync("SELECT * FROM account WHERE id = ?", [id]);
-    return user || null;
-  } catch (error) {
-    console.error("❌ Error getUserById:", error);
-    return null;
-  }
-};
-
-export const updateUserProfile = (id, { name, avatar_uri, email }) => {
-  try {
-    // COALESCE(?, column_name) cho phép truyền null để giữ nguyên giá trị cũ
     db.runSync(
-      "UPDATE account SET name = COALESCE(?, name), avatar_uri = COALESCE(?, avatar_uri), email = COALESCE(?, email) WHERE id = ?",
-      [name, avatar_uri, email, id]
+      "UPDATE reviews SET content = ? WHERE id = ?",
+      [content.trim(), reviewId]
     );
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error("❌ Error updateUserProfile:", error);
-    return false;
-  }
-};
-
-// Cập nhật mật khẩu (plain text)
-export const updateUserPassword = (id, newPassword) => {
-  try {
-    db.runSync("UPDATE account SET password = ? WHERE id = ?", [newPassword, id]);
-    return true;
-  } catch (error) {
-    console.error("❌ Error updateUserPassword:", error);
-    return false;
-  }
-};
-
-// Tạo/cập nhật user OAuth
-export const upsertOAuthUser = (provider, oauthId, email, name = null, avatarUri = null) => {
-  try {
-    // 1. Tìm theo OAuth ID
-    let existing = db.getFirstSync(
-      "SELECT * FROM account WHERE oauth_provider = ? AND oauth_id = ?",
-      [provider, oauthId]
-    );
-    let created = false;
-
-    if (existing) {
-      // Update
-      db.runSync(
-        "UPDATE account SET name = COALESCE(?, name), avatar_uri = COALESCE(?, avatar_uri) WHERE id = ?",
-        [name, avatarUri, existing.id]
-      );
-      return { success: true, id: existing.id, created: false };
-    }
-
-    // 2. Nếu chưa có, tạo mới
-    const result = db.runSync(
-      "INSERT INTO account (email, password, name, avatar_uri, role, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [email, null, name, avatarUri, "User", provider, oauthId]
-    );
-    return { success: true, id: result.lastInsertRowId, created: true };
-
-  } catch (error) {
-    console.error("❌ Error upsertOAuthUser:", error);
+    console.error("❌ Error updateReview:", error);
     return { success: false, error };
   }
 };
 
-export const seedAdminAccount = () => {
-  const adminEmail = "admin@admin.com";
-  const admin = getUserByEmail(adminEmail);
-  if (!admin) {
-    addUser(adminEmail, "admin123", "Super Admin", null, "admin"); // Mật khẩu plain text
-    console.log("✅ Admin account seeded: admin@admin.com / admin123");
-  }
-};
+
+
+
+
 
 export const addToWishlist = async (userId, movieId) => {
   try {
@@ -887,6 +790,7 @@ export const getWishlistByAccount = (userId) => {
     console.error("❌ Error getWishlistByAccount:", error);
   }
 }
+
 // Force reset và seed lại cinemas
 export const resetAndSeedCinemas = () => {
   try {
@@ -1211,12 +1115,15 @@ export const seedSampleCinemas = () => {
 };
 
 
+
 // ============================================
 // STEP 5: Auto-init on import
 // ============================================
 
-initDatabase();
-seedSampleCinemas();
+(async () => {
+  await initDatabase();
+  seedSampleCinemas();
+})();
 
 
 // ============================================
