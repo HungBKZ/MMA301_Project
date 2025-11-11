@@ -27,6 +27,8 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
+import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
+import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
 
 // 📱 Import screens - User
 import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
@@ -155,6 +157,42 @@ function SearchStack() {
         name="Detail"
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/**
+ * 📁 Collections Stack (User)
+ */
+function CollectionsStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { 
+          backgroundColor: colors.surface,
+          elevation: 4,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        headerTintColor: colors.primary,
+        headerTitleStyle: { 
+          fontWeight: "bold",
+          color: colors.textPrimary,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="CollectionsList"
+        component={CollectionsListScreen}
+        options={{ title: "Collections" }}
+      />
+      <Stack.Screen
+        name="CollectionDetail"
+        component={CollectionDetailScreen}
+        options={{ title: "Collection" }}
       />
     </Stack.Navigator>
   );
@@ -337,6 +375,9 @@ function UserTabs() {
             case "Home":
               iconName = focused ? "home" : "home-outline";
               break;
+            case "Collections":
+              iconName = focused ? "albums" : "albums-outline";
+              break;
             case "Maps":
               iconName = focused ? "map" : "map-outline";
               break;
@@ -381,6 +422,11 @@ function UserTabs() {
           headerTintColor: colors.primary,
           headerTitleStyle: { fontWeight: "bold" },
         }}
+      />
+      <Tab.Screen
+        name="Collections"
+        component={CollectionsStack}
+        options={{ title: "Collections" }}
       />
       <Tab.Screen
         name="Maps"

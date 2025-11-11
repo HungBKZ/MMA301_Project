@@ -8,6 +8,8 @@ import {
   Alert,
   Image,
   TextInput,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
@@ -17,8 +19,12 @@ import {
   updateMovie,
   updateMovieStatus,
   deleteMovie,
+  getCollectionsByUser,
+  addMovieToCollection,
+  createCollection,
 } from "../database/db";
 import { colors, commonStyles } from "../styles/commonStyles";
+import { useAuth } from "../auth/AuthContext";
 
 /**
  * MovieDetailScreen - Task 3: Movie Detail Screen
@@ -28,6 +34,13 @@ const MovieDetailScreen = ({ route, navigation }) => {
   const { movieId } = route.params;
   const [movie, setMovie] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  // Add-to-collection modal
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [newCollectionName, setNewCollectionName] = useState("");
 
   // Trạng thái chỉnh sửa
   const [editTitle, setEditTitle] = useState("");
@@ -70,6 +83,48 @@ const MovieDetailScreen = ({ route, navigation }) => {
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     }
+  };
+
+  /** Open Add-to-Collection modal */
+  const openAddToCollection = () => {
+    if (!userId) {
+      Alert.alert("Login required", "Please login to use collections.");
+      return;
+    }
+    try {
+      const rows = getCollectionsByUser(userId) || [];
+      setCollections(rows);
+      setShowCollectionModal(true);
+    } catch (e) {
+      Alert.alert("Error", "Cannot load your collections.");
+    }
+  };
+
+  const handleSelectCollection = (collectionId) => {
+    const ok = addMovieToCollection(collectionId, movieId);
+    if (!ok) {
+      Alert.alert("Error", "Cannot add movie to collection.");
+      return;
+    }
+    setShowCollectionModal(false);
+    Alert.alert("Added", "Movie added to collection.");
+  };
+
+  const handleQuickCreateCollection = () => {
+    const name = newCollectionName.trim();
+    if (!name) {
+      Alert.alert("Validation", "Please enter collection name.");
+      return;
+    }
+    const r = createCollection(userId, name);
+    if (!r.success) {
+      Alert.alert("Error", "Cannot create collection (maybe duplicate name).");
+      return;
+    }
+    setNewCollectionName("");
+    // refresh list and keep modal open
+    const rows = getCollectionsByUser(userId) || [];
+    setCollections(rows);
   };
 
   /** Chọn ảnh poster mới */
@@ -394,31 +449,102 @@ const MovieDetailScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.actionContainer}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => setIsEditing(true)}
-            >
-              <Ionicons name="create" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.warning }]}
-              onPress={handleChangeStatus}
-            >
-              <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Change{"\n"}Status</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.error }]}
-              onPress={handleDelete}
-            >
-              <Ionicons name="trash" size={20} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          <>
+            <View style={styles.actionContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={() => setIsEditing(true)}
+              >
+                <Ionicons name="create" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.warning }]}
+                onPress={handleChangeStatus}
+              >
+                <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Change{"\n"}Status</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.error }]}
+                onPress={handleDelete}
+              >
+                <Ionicons name="trash" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.actionContainer, { marginTop: 8 }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.accent }]}
+                onPress={openAddToCollection}
+              >
+                <Ionicons name="albums" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
+              </TouchableOpacity>
+              {/* spacers to keep the same width as other buttons */}
+              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
+              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
+            </View>
+          </>
         )}
       </View>
+
+      {/* Add to Collection Modal */}
+      <Modal
+        visible={showCollectionModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCollectionModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Add to Collection</Text>
+
+            <View style={styles.quickCreateRow}>
+              <TextInput
+                value={newCollectionName}
+                onChangeText={setNewCollectionName}
+                placeholder="New collection name"
+                placeholderTextColor={colors.textSecondary}
+                style={styles.input}
+              />
+              <TouchableOpacity style={styles.quickCreateBtn} onPress={handleQuickCreateCollection}>
+                <Ionicons name="add" size={18} color="#FFFFFF" />
+                <Text style={styles.quickCreateText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={collections}
+              keyExtractor={(it) => String(it.id)}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.collectionRow}
+                  onPress={() => handleSelectCollection(item.id)}
+                >
+                  <Ionicons name="albums-outline" size={20} color={colors.primary} />
+                  <Text style={styles.collectionName}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text style={{ color: colors.textSecondary, textAlign: "center", marginTop: 12 }}>
+                  No collections. Create one above.
+                </Text>
+              }
+            />
+
+            <View style={{ alignItems: "flex-end", marginTop: 8 }}>
+              <TouchableOpacity
+                style={[styles.quickCreateBtn, { backgroundColor: colors.textSecondary }]}
+                onPress={() => setShowCollectionModal(false)}
+              >
+                <Ionicons name="close" size={18} color="#FFFFFF" />
+                <Text style={styles.quickCreateText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -540,6 +666,60 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     marginTop: 6,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    padding: 24,
+    justifyContent: "center",
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    maxHeight: "80%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textPrimary,
+    marginBottom: 12,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.textPrimary,
+  },
+  quickCreateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  quickCreateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  quickCreateText: { color: "#FFFFFF", fontWeight: "600", marginLeft: 6 },
+  collectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  collectionName: {
+    marginLeft: 10,
+    color: colors.textPrimary,
+    fontWeight: "600",
   },
   editActionContainer: {
     flexDirection: "row",
