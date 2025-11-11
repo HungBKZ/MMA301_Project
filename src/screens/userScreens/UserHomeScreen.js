@@ -1,17 +1,20 @@
 import React from "react";
 import { View, Text, Button, StyleSheet, ScrollView } from "react-native";
-import { useAuth } from "../../auth/AuthContext";
 import { colors } from "../../styles/commonStyles";
 
-export default function UserHomeScreen() {
-  const { user, logout } = useAuth();
+export default function UserHomeScreen({ navigation, route }) {
+  const userParams = route?.params || {};
+
+  const logout = () => {
+    navigation.replace("Login");
+  };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Chao mung, {user?.username || user?.email || "Guest"}!</Text>
+        <Text style={styles.title}>Chao mung, {userParams?.username || userParams?.email || "Guest"}!</Text>
         <Text style={styles.subtitle}>Ban dang dang nhap voi vai tro: User</Text>
-        
+
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>📱 Tinh nang cho User:</Text>
           <Text style={styles.infoText}>• Xem danh sach phim</Text>
@@ -37,9 +40,9 @@ export default function UserHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
   },
   content: {
     padding: 20,
