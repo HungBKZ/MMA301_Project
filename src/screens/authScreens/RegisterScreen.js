@@ -93,29 +93,29 @@ export default function RegisterScreen({ navigation }) {
       const existing = getUserByEmail(email.trim());
       if (existing) { setErr("EMAIL_EXISTS"); setLoading(false); return; }
       const r = await addUser(
-          email.trim(),
-          password,
-          name.trim() || null,
-          avatarUri || null,
-          "User",
-          phone.trim(),
-          dateOfBirth.trim(),
-          gender
-        );
+        email.trim(),
+        password,
+        name.trim() || null,
+        avatarUri || null,
+        "User",
+        phone.trim(),
+        dateOfBirth.trim(),
+        gender
+      );
       if (!r.success) { setErr("Đăng ký thất bại"); setLoading(false); return; }
       // fetch user to read role (default User)
-  const user = getUserByEmail(email.trim());
-  if (user) {
-      await login({
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        date_of_birth: user.date_of_birth,
-        gender: user.gender,
-      });
-  }
-  // AuthProvider state updated — AppNavigator will switch to MainTabs automatically.
+      const user = getUserByEmail(email.trim());
+      if (user) {
+        await login({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          date_of_birth: user.date_of_birth,
+          gender: user.gender,
+        });
+      }
+      // AuthProvider state updated — AppNavigator will switch to MainTabs automatically.
     } catch (e) {
       console.error("Register error:", e);
       setErr("Lỗi khi đăng ký.");
@@ -205,13 +205,48 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "700", marginBottom: 8, color: colors.primary },
   rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   avatarBox: { width: 78, height: 78, borderRadius: 8, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  avatarPlaceholder: { alignItems: "center" }, avatarText: { fontSize: 11, color: colors.textSecondary, marginTop: 4 }, avatarImg: { width: 78, height: 78, borderRadius: 6 },
+  avatarPlaceholder: { alignItems: "center" },
+  avatarText: { fontSize: 11, color: colors.textSecondary, marginTop: 4 },
+  avatarImg: { width: 78, height: 78, borderRadius: 6 },
   clearAvatar: { position: "absolute", top: -6, right: -6, backgroundColor: "#d33", borderRadius: 12, padding: 2 },
+
   input: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, marginBottom: 8, borderRadius: 8, height: INPUT_H, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
-  inputSmall: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, marginBottom: 6, borderRadius: 8, height: INPUT_H - 4, backgroundColor: "#fff", fontSize: 13 },
-  inputFlex: { flex: 1 }, half: { width: "48%" }, row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dateBtn: { justifyContent: "center" },
-  genderRow: { marginTop: 6, marginBottom: 6 }, genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 6 }, pickerWrap: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, overflow: "hidden", backgroundColor: "#fff" }, picker: { height: 40 },
-  passwordRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 }, eyeBtn: { marginLeft: 8, padding: 6, justifyContent: "center", alignItems: "center" },
-  btn: { marginTop: 6, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8, alignItems: "center" }, btnDisabled: { opacity: 0.8 }, btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  cancelBtn: { marginTop: 8, alignItems: "center", paddingVertical: 6 }, cancelText: { color: colors.textSecondary }, error: { color: "red", marginBottom: 6, textAlign: "center", padding: 6, borderWidth: 1, borderColor: "red", borderRadius: 4, backgroundColor: "#fee" }
+  // tăng height và padding để text không bị che
+  inputSmall: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, marginBottom: 10, borderRadius: 8, height: INPUT_H + 4, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
+
+  inputFlex: { flex: 1 },
+  half: { width: "48%" },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dateBtn: { justifyContent: "center" },
+
+  genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
+  // tăng marginBottom, padding dọc và đảm bảo chiều cao phù hợp
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    height: 50,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    marginBottom: 12, // khoảng cách dưới picker
+  },
+  picker: {
+    height: 50,
+    color: colors.textPrimary,
+    width: "100%",
+    fontSize: 13,
+    lineHeight: 20,
+    paddingVertical: Platform.OS === "android" ? 6 : 0, // android cần padding dọc
+  },
+
+  passwordRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  eyeBtn: { marginLeft: 8, padding: 6, justifyContent: "center", alignItems: "center" },
+  btn: { marginTop: 6, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8, alignItems: "center" },
+  btnDisabled: { opacity: 0.8 },
+  btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  cancelBtn: { marginTop: 8, alignItems: "center", paddingVertical: 6 },
+  cancelText: { color: colors.textSecondary },
+  error: { color: "red", marginBottom: 6, textAlign: "center", padding: 6, borderWidth: 1, borderColor: "red", borderRadius: 4, backgroundColor: "#fee" }
 });

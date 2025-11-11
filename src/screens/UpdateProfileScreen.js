@@ -297,7 +297,23 @@ const styles = StyleSheet.create({
     input: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, marginBottom: 18, borderRadius: 8, height: INPUT_H, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
     inputSmall: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, marginBottom: 18, borderRadius: 8, height: INPUT_H - 4, backgroundColor: "#fff", fontSize: 13 },
     inputFlex: { flex: 1 }, half: { width: "48%" }, row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }, dateBtn: { justifyContent: "center" },
-    genderRow: { marginTop: 12, marginBottom: 18 }, genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 }, pickerWrap: { borderWidth: 1, borderColor: colors.border, borderRadius: 8, overflow: "hidden", backgroundColor: "#fff" }, picker: { height: 40 },
+    genderRow: { marginTop: 12, marginBottom: 18 },
+    genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
+    pickerWrap: {
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 8,
+        overflow: "hidden",
+        backgroundColor: "#fff",
+        height: 48,               // tăng chiều cao
+        justifyContent: "center", // căn giữa nội dung
+        paddingHorizontal: 6,
+    },
+    picker: {
+        height: 48,
+        color: colors.textPrimary,
+        width: "100%",
+    },
     btn: { marginTop: 12, backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 8, alignItems: "center" }, btnDisabled: { opacity: 0.8 }, btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
     cancelBtn: { marginTop: 18, alignItems: "center", paddingVertical: 8 }, cancelText: { color: colors.textSecondary }, error: { color: "red", marginBottom: 12, textAlign: "center", padding: 8, borderWidth: 1, borderColor: "red", borderRadius: 4, backgroundColor: "#fee" }
 });
