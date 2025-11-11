@@ -30,6 +30,7 @@ import RegisterScreen from "./src/screens/authScreens/RegisterScreen";
 // 📱 Import screens - Profile
 import ProfileScreen from "./src/screens/ProfileScreen";
 import UpdateProfileScreen from "./src/screens/UpdateProfileScreen";
+import ChangePasswordScreen from "./src/screens/ChangePasswordScreen";
 import CollectionsListScreen from "./src/screens/collections/CollectionsListScreen";
 import CollectionDetailScreen from "./src/screens/collections/CollectionDetailScreen";
 
@@ -585,6 +586,11 @@ function AppNavigator() {
         name="UpdateProfile"
         component={UpdateProfileScreen}
         options={{ title: "Cập nhật tài khoản" }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: "Đổi mật khẩu" }}
       />
     </Stack.Navigator>
   );
