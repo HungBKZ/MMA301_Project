@@ -134,10 +134,10 @@ export const initDatabase = () => {
     `);
 
     console.log("✅ Database initialized successfully (movies, account, cinemas, showtimes)");
-    
+
     // Migration: Thêm duration_minutes và cập nhật status nếu chưa có
     migrateDatabase();
-    
+
     seedAdminAccount(); // Tạo tài khoản admin mặc định sau khi tạo bảng
     seedCinemasCanTho(); // Tạo dữ liệu rạp Cần Thơ
   } catch (error) {
@@ -153,13 +153,13 @@ const migrateDatabase = () => {
     // Kiểm tra xem cột duration_minutes đã tồn tại chưa
     const tableInfo = db.getAllSync("PRAGMA table_info(movies)");
     const hasDuration = tableInfo.some(col => col.name === "duration_minutes");
-    
+
     if (!hasDuration) {
       console.log("🔄 Migrating database: Adding duration_minutes column...");
       db.execSync("ALTER TABLE movies ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 120");
       console.log("✅ Added duration_minutes column");
     }
-    
+
     // Cập nhật các giá trị status cũ sang format mới
     console.log("🔄 Updating status values to new format...");
     db.execSync(`
@@ -869,6 +869,8 @@ export const getWishlistByAccount = (userId) => {
     return wishlist || [];
   } catch (error) {
     console.error("❌ Error getWishlistByAccount:", error);
+  }
+}
 // Force reset và seed lại cinemas
 export const resetAndSeedCinemas = () => {
   try {
@@ -886,7 +888,7 @@ export const seedCinemasCanTho = () => {
   try {
     const existingCinemas = db.getAllSync("SELECT COUNT(*) as count FROM cinemas");
     console.log("🔍 Checking existing cinemas:", existingCinemas);
-    
+
     if (existingCinemas[0].count > 0) {
       console.log("✅ Cinemas already seeded, count:", existingCinemas[0].count);
       return;
@@ -1031,7 +1033,7 @@ export const findNearbyCinemas = (latitude, longitude, radiusKm = 10) => {
     // Haversine formula approximation trong SQLite
     // 111.045 km = 1 degree latitude
     const allCinemas = db.getAllSync("SELECT * FROM cinemas");
-    
+
     return allCinemas
       .map(cinema => {
         const latDiff = cinema.latitude - latitude;
