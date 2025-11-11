@@ -120,6 +120,8 @@ function HomeStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}
@@ -207,6 +209,8 @@ function SearchStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
         name="ReviewList"
         component={ReviewListScreen}
         options={{ title: "Reviews Movie" }}

@@ -471,14 +471,14 @@ const MovieDetailScreen = ({ route, navigation }) => {
             <Text style={styles.ticketDescription}>
               Phim dang chieu! Dat ve ngay de khong bo lo.
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.bookButton}
               onPress={() => Alert.alert('Coming Soon', 'Tinh nang dat ve se co som!')}
             >
               <Ionicons name="calendar" size={20} color="#FFFFFF" />
               <Text style={styles.bookButtonText}>Chon suat chieu</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.findCinemaButton}
               onPress={() => navigation.navigate('Maps')}
             >
@@ -540,7 +540,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               </View>
             )}
-            
+
             {/* User Actions - Show for all users */}
             <View style={[styles.actionContainer, { marginTop: user?.role === 'Admin' ? 8 : 0 }]}>
               <TouchableOpacity
@@ -567,6 +567,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
               >
                 <Ionicons name="airplane" size={20} color="#FFFFFF" />
                 <Text style={styles.editButtonText}>Booking</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.primary }]}
                 onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
