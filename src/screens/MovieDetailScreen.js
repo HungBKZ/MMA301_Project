@@ -22,6 +22,8 @@ import {
   getCollectionsByUser,
   addMovieToCollection,
   createCollection,
+  getWishlistByAccount,
+  addToWishlist
 } from "../database/db";
 import { colors, commonStyles } from "../styles/commonStyles";
 import { useAuth } from "../auth/AuthContext";
@@ -85,6 +87,26 @@ const MovieDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleAddToWishlist = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in.');
+      return;
+    }
+    try {
+      const existing = await getWishlistByAccount(user.id);
+      const isMovieInWishlist = existing.some(item => item.movie_id === movie.id);
+
+      if (isMovieInWishlist) {
+        Alert.alert('Error', 'This movie is already in your wishlist.');
+        return;
+      }
+      await addToWishlist(user.id, movie.id);
+      Alert.alert('Success', 'Added to wishlist!');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Cannot add to wishlist.');
+    }
+  };
   /** Open Add-to-Collection modal */
   const openAddToCollection = () => {
     if (!userId) {
@@ -235,8 +257,8 @@ const MovieDetailScreen = ({ route, navigation }) => {
     movie.status === "SHOWING"
       ? "#4CAF50" // Green for showing
       : movie.status === "ENDED"
-      ? "#9E9E9E" // Gray for ended
-      : "#2196F3"; // Blue for coming soon
+        ? "#9E9E9E" // Gray for ended
+        : "#2196F3"; // Blue for coming soon
 
   return (
     <ScrollView style={commonStyles.container}>
@@ -307,8 +329,8 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 movie.status === "Watched"
                   ? "checkmark-circle"
                   : movie.status === "Favorite"
-                  ? "heart"
-                  : "time"
+                    ? "heart"
+                    : "time"
               }
               size={16}
               color="#FFFFFF"
@@ -474,6 +496,13 @@ const MovieDetailScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             </View>
             <View style={[styles.actionContainer, { marginTop: 8 }]}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.error }]}
+                onPress={handleAddToWishlist}
+              >
+                <Ionicons name="heart" size={20} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Wishlist</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: colors.accent }]}
                 onPress={openAddToCollection}
