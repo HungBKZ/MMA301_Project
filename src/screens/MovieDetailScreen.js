@@ -167,7 +167,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
 
   /** Thay đổi status (xoay vòng 3 trạng thái) */
   const handleChangeStatus = () => {
-    const statuses = ["To Watch", "Watched", "Favorite"];
+    const statuses = ["COMING_SOON", "SHOWING", "ENDED"];
     const currentIndex = statuses.indexOf(movie.status);
     const nextIndex = (currentIndex + 1) % statuses.length;
     const newStatus = statuses[nextIndex];
@@ -326,10 +326,10 @@ const MovieDetailScreen = ({ route, navigation }) => {
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Ionicons
               name={
-                movie.status === "Watched"
-                  ? "checkmark-circle"
-                  : movie.status === "Favorite"
-                    ? "heart"
+                movie.status === "SHOWING"
+                  ? "play-circle"
+                  : movie.status === "ENDED"
+                    ? "checkmark-circle"
                     : "time"
               }
               size={16}
@@ -446,6 +446,33 @@ const MovieDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
+        {/* Buy Ticket Section - Only show for Users and if movie is SHOWING */}
+        {user?.role === 'User' && movie.status === 'SHOWING' && !isEditing && (
+          <View style={styles.ticketCard}>
+            <View style={styles.ticketHeader}>
+              <Ionicons name="ticket" size={24} color={colors.primary} />
+              <Text style={styles.ticketTitle}>Mua ve xem phim</Text>
+            </View>
+            <Text style={styles.ticketDescription}>
+              Phim dang chieu! Dat ve ngay de khong bo lo.
+            </Text>
+            <TouchableOpacity 
+              style={styles.bookButton}
+              onPress={() => Alert.alert('Coming Soon', 'Tinh nang dat ve se co som!')}
+            >
+              <Ionicons name="calendar" size={20} color="#FFFFFF" />
+              <Text style={styles.bookButtonText}>Chon suat chieu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.findCinemaButton}
+              onPress={() => navigation.navigate('Maps')}
+            >
+              <Ionicons name="location" size={20} color={colors.primary} />
+              <Text style={styles.findCinemaText}>Tim rap gan ban</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Nút hành động */}
         {isEditing ? (
           <View style={styles.editActionContainer}>
@@ -472,32 +499,37 @@ const MovieDetailScreen = ({ route, navigation }) => {
           </View>
         ) : (
           <>
-            <View style={styles.actionContainer}>
+            {/* Admin Actions - Only show for Admin role */}
+            {user?.role === 'Admin' && (
+              <View style={styles.actionContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Ionicons name="create" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.warning }]}
+                  onPress={handleChangeStatus}
+                >
+                  <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Change{"\n"}Status</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.error }]}
+                  onPress={handleDelete}
+                >
+                  <Ionicons name="trash" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            {/* User Actions - Show for all users */}
+            <View style={[styles.actionContainer, { marginTop: user?.role === 'Admin' ? 8 : 0 }]}>
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={() => setIsEditing(true)}
-              >
-                <Ionicons name="create" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.warning }]}
-                onPress={handleChangeStatus}
-              >
-                <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Change{"\n"}Status</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.error }]}
-                onPress={handleDelete}
-              >
-                <Ionicons name="trash" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[styles.actionContainer, { marginTop: 8 }]}>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.error }]}
+                style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
                 onPress={handleAddToWishlist}
               >
                 <Ionicons name="heart" size={20} color="#FFFFFF" />
@@ -517,9 +549,6 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>Review</Text>
               </TouchableOpacity>
-              {/* spacers to keep the same width as other buttons */}
-              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
-              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
             </View>
           </>
         )}
@@ -775,6 +804,68 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+    marginLeft: 8,
+  },
+  // Ticket Card Styles
+  ticketCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  ticketHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ticketTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginLeft: 10,
+  },
+  ticketDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  bookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  bookButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  findCinemaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  findCinemaText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
     marginLeft: 8,
   },
 });

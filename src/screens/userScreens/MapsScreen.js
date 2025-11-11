@@ -72,11 +72,15 @@ export default function MapsScreen() {
         return;
       }
 
-      // Format cinemas với đầy đủ thông tin
-      const formattedCinemas = nearbyCinemas.map(cinema => ({
+      // Chỉ lấy 3 rạp gần nhất và đổi tên thành AquaCode Cinema 1, 2, 3
+      const top3Cinemas = nearbyCinemas.slice(0, 3);
+      
+      // Format cinemas với tên AquaCode Cinema và id
+      const formattedCinemas = top3Cinemas.map((cinema, index) => ({
+        id: index + 1,
         latitude: cinema.latitude,
         longitude: cinema.longitude,
-        title: cinema.name,
+        title: `AquaCode Cinema ${index + 1}`,
         address: cinema.address,
         phone: cinema.phone,
         distance: cinema.distance,
