@@ -1,8 +1,6 @@
-import * as SQLite from "expo-sqlite";
+import { db } from "./db";
 // ticketDB helpers will be used to seed tickets after bookings
 import { initTicketsTable, seedDefaultTickets } from "./ticketDB";
-
-const db = SQLite.openDatabaseSync("moviesApp.db");
 
 // Initialize bookings table
 export const initBookingsTable = () => {

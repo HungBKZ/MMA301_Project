@@ -1,6 +1,4 @@
-import * as SQLite from "expo-sqlite";
-
-const db = SQLite.openDatabaseSync("moviesApp.db");
+import { db } from "./db";
 
 // Initialize rooms table (SQLite compatible)
 export const initRoomsTable = () => {
