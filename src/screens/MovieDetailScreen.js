@@ -167,7 +167,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
 
   /** Thay đổi status (xoay vòng 3 trạng thái) */
   const handleChangeStatus = () => {
-    const statuses = ["To Watch", "Watched", "Favorite"];
+    const statuses = ["COMING_SOON", "SHOWING", "ENDED"];
     const currentIndex = statuses.indexOf(movie.status);
     const nextIndex = (currentIndex + 1) % statuses.length;
     const newStatus = statuses[nextIndex];
@@ -326,10 +326,10 @@ const MovieDetailScreen = ({ route, navigation }) => {
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Ionicons
               name={
-                movie.status === "Watched"
-                  ? "checkmark-circle"
-                  : movie.status === "Favorite"
-                    ? "heart"
+                movie.status === "SHOWING"
+                  ? "play-circle"
+                  : movie.status === "ENDED"
+                    ? "checkmark-circle"
                     : "time"
               }
               size={16}
