@@ -40,6 +40,7 @@ import MapsScreen from "./src/screens/userScreens/MapsScreen";
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
+import ReviewListScreen from "./src/screens/ReviewListScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -111,6 +112,11 @@ function HomeStack() {
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
       />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -148,6 +154,11 @@ function SearchStack() {
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
       />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -180,6 +191,11 @@ function WishlistStack() {
         name="Detail"
         component={MovieDetailScreen}
         options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
       />
     </Stack.Navigator>
   );
