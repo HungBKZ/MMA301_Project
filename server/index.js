@@ -288,6 +288,70 @@ app.get('/', (_req, res) => {
     res.json({ ok: true, name: 'MMA301 VNPay server', returnUrl: VNP_RETURN_URL });
 });
 
+// Booking view page: displays all seats and metadata encoded in BOOKING QR payload
+// Format: BOOKING|code=...|id=...|movie=...|time=...|cinema=...|room=...|seats=A1,A2,B1|count=3|paid=3
+app.get('/booking/view', (req, res) => {
+    const text = String(req.query.text || '').trim();
+    const fields = { code: '', id: '', movie: '', time: '', cinema: '', room: '', seats: '', count: '', paid: '', cinemaAddr: '' };
+    if (text.startsWith('BOOKING|')) {
+        Object.keys(fields).forEach(k => {
+            const m = text.match(new RegExp(`(?:^|\\|)${k}=([^|]+)`));
+            if (m) fields[k] = m[1];
+        });
+    }
+    const esc = (s) => String(s).replace(/[&<>\"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const seatArr = fields.seats ? fields.seats.split(/[,\s]+/).filter(Boolean) : [];
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Thông tin đặt chỗ</title>
+    <style>
+        :root{color-scheme:light dark}
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:20px;margin:0;background:#f6f8fa;}
+        .wrap{max-width:820px;margin:0 auto}
+        .card{background:#fff;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.08);padding:26px;}
+        @media (prefers-color-scheme: dark){body{background:#0f1316}.card{background:#182027;box-shadow:0 6px 24px rgba(0,0,0,.55);} .muted{color:#95a2b3}}
+        h1{margin:0 0 18px;font-size:24px;font-weight:700}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+        .item{background:#fafafa;border:1px solid #e2e8f0;padding:14px;border-radius:12px}
+        @media (prefers-color-scheme: dark){.item{background:#1f2730;border-color:#2d3a47}}
+        .label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px;color:#596273}
+        .value{margin:0;font-size:15px;word-break:break-word}
+        .seats{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+        .seat{background:#2563eb;color:#fff;padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,.18)}
+        @media (prefers-color-scheme: dark){.seat{background:#3b82f6}}
+        .muted{font-size:13px;color:#666;margin-top:28px;line-height:1.5}
+        footer{margin-top:34px;font-size:11px;color:#888;text-align:center}
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>Thông tin đặt chỗ</h1>
+            ${!text ? '<p class="muted">Không có dữ liệu đặt chỗ. Vui lòng quét lại.</p>' : ''}
+            <div class="grid">
+                ${fields.movie ? `<div class="item"><p class="label">Phim</p><p class="value">${esc(fields.movie)}</p></div>` : ''}
+                ${fields.time ? `<div class="item"><p class="label">Suất chiếu</p><p class="value">${esc(fields.time)}</p></div>` : ''}
+                ${fields.cinema ? `<div class="item"><p class="label">Rạp</p><p class="value">${esc(fields.cinema)}</p></div>` : ''}
+                ${fields.room ? `<div class="item"><p class="label">Phòng</p><p class="value">${esc(fields.room)}</p></div>` : ''}
+                ${fields.count ? `<div class="item"><p class="label">Tổng số vé</p><p class="value">${esc(fields.count)}</p></div>` : ''}
+                ${fields.paid ? `<div class="item"><p class="label">Đã thanh toán</p><p class="value">${esc(fields.paid)}</p></div>` : ''}
+            </div>
+            <div class="item" style="margin-top:4px">
+                <p class="label">Danh sách ghế</p>
+                ${seatArr.length ? `<div class="seats">${seatArr.map(s => `<span class="seat">${esc(s)}</span>`).join('')}</div>` : `<p class="value" style="font-style:italic;color:#666">Không có ghế</p>`}
+            </div>
+            <p class="muted">Trang này hiển thị thông tin được mã hoá trong QR. Để kiểm tra trạng thái thực tế (ví dụ ghế bị huỷ), hãy mở ứng dụng chính.</p>
+            <footer>© ${new Date().getFullYear()} MMA301 MovieApp</footer>
+        </div>
+    </div>
+</body>
+</html>`);
+});
+
 // Simple ticket view page so external QR scanners can open a human-readable page.
 // Supports two forms:
 // 1) /ticket/view?text=TICKET|code=...|id=...|seat=...|movie=...|time=...
@@ -306,7 +370,7 @@ app.get('/ticket/view', (req, res) => {
         });
     }
     // Basic formatting helpers
-    const esc = (s) => String(s).replace(/[&<>\"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    const esc = (s) => String(s).replace(/[&<>\"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     const priceFormatted = fields.price ? (() => {
         const n = Number(fields.price);
         return Number.isFinite(n) ? n.toLocaleString('vi-VN') + 'đ' : esc(fields.price);
@@ -342,7 +406,7 @@ app.get('/ticket/view', (req, res) => {
     <div class="grid">
     ${fields.movie ? `<div class="item"><p class="label">Phim</p><p class="value">${esc(fields.movie)}</p></div>` : ''}
     ${fields.time ? `<div class="item"><p class="label">Suất chiếu</p><p class="value">${esc(fields.time)}</p></div>` : ''}
-    ${fields.cinema ? `<div class="item"><p class="label">Rạp</p><p class="value">${esc(fields.cinema)}${fields.cinemaAddr?'<br/><small>'+esc(fields.cinemaAddr)+'</small>':''}</p></div>` : ''}
+    ${fields.cinema ? `<div class="item"><p class="label">Rạp</p><p class="value">${esc(fields.cinema)}${fields.cinemaAddr ? '<br/><small>' + esc(fields.cinemaAddr) + '</small>' : ''}</p></div>` : ''}
     ${fields.room ? `<div class="item"><p class="label">Phòng</p><p class="value">${esc(fields.room)}</p></div>` : ''}
     ${fields.seat ? `<div class="item"><p class="label">Ghế</p><p class="value">${esc(fields.seat)}</p></div>` : ''}
       ${priceFormatted ? `<div class="item"><p class="label">Giá</p><p class="value">${priceFormatted}</p></div>` : ''}

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { getAllTickets } from '../database/ticketDB';
+import { getAllBookings, getBookingById } from '../database/bookingDB';
 import { getShowtimeById } from '../database/showtimeDB';
 import { getRoomById } from '../database/roomDB';
 import { getMovieById, getCinemaById } from '../database/db';
@@ -61,9 +62,15 @@ export default function QRScannerScreen({ navigation }) {
         }
     };
 
-    // Normalize scanned data: support raw code, numeric id, extended payload (TICKET|code=...), or URL style.
+    // Normalize scanned data: support booking payload, raw code, numeric id, extended payload (TICKET|code=...), or URL style.
     const extractCode = (raw) => {
         if (!raw) return raw;
+        if (raw.startsWith('BOOKING|')) {
+            const mId = raw.match(/(?:^|\|)id=(\d+)/);
+            if (mId) return `BOOKING_ID_${mId[1]}`;
+            const mCode = raw.match(/(?:^|\|)code=([^|]+)/);
+            if (mCode) return `BOOKING_CODE_${mCode[1]}`;
+        }
         if (raw.startsWith('TICKET|')) {
             const m = raw.match(/(?:^|\|)code=([^|]+)/);
             if (m) return m[1];
@@ -90,6 +97,26 @@ export default function QRScannerScreen({ navigation }) {
         setScanning(false);
         try {
             const normalized = extractCode(data);
+            // Booking-level QR
+            if (normalized.startsWith('BOOKING_ID_') || normalized.startsWith('BOOKING_CODE_')) {
+                let booking = null;
+                if (normalized.startsWith('BOOKING_ID_')) {
+                    const id = Number(normalized.replace('BOOKING_ID_', ''));
+                    booking = getBookingById(id);
+                } else {
+                    const code = normalized.replace('BOOKING_CODE_', '');
+                    const allB = getAllBookings() || [];
+                    booking = allB.find(b => b.booking_code === code);
+                }
+                if (booking && String(booking.status).toUpperCase() === 'PAID') {
+                    navigation.replace('Tickets', { bookingId: booking.id });
+                    return;
+                }
+                Alert.alert('QR Booking', 'Không tìm thấy booking PAID hợp lệ.');
+                setTimeout(() => setScanning(true), 1600);
+                return;
+            }
+            // Ticket-level QR (legacy support)
             const all = getAllTickets() || [];
             const foundRow = all.find(t => t.qr_code === normalized || String(t.id) === normalized);
             if (foundRow) {
@@ -97,8 +124,7 @@ export default function QRScannerScreen({ navigation }) {
                 navigation.replace('TicketDetail', { ticket: detailed });
                 return;
             }
-            Alert.alert('QR Quét', `Không khớp vé.
-Nội dung quét: ${data}`);
+            Alert.alert('QR Quét', `Không khớp mã hợp lệ.\nNội dung quét: ${data}`);
             setTimeout(() => setScanning(true), 1800);
         } catch (e) {
             console.error('Scan error', e);
@@ -134,13 +160,25 @@ Nội dung quét: ${data}`);
                             const data = (manualValue || '').trim();
                             if (!data) return Alert.alert('Vui lòng nhập mã');
                             const normalized = extractCode(data);
-                            const all = getAllTickets() || [];
-                            const foundRow = all.find(t => t.qr_code === normalized || String(t.id) === normalized);
+                            if (normalized.startsWith('BOOKING_ID_') || normalized.startsWith('BOOKING_CODE_')) {
+                                let booking = null;
+                                if (normalized.startsWith('BOOKING_ID_')) booking = getBookingById(Number(normalized.replace('BOOKING_ID_', '')));
+                                else {
+                                    const code = normalized.replace('BOOKING_CODE_', '');
+                                    booking = (getAllBookings() || []).find(b => b.booking_code === code);
+                                }
+                                if (booking && String(booking.status).toUpperCase() === 'PAID') {
+                                    return navigation.replace('Tickets', { bookingId: booking.id });
+                                }
+                                return Alert.alert('Không tìm thấy booking PAID hợp lệ');
+                            }
+                            const allT = getAllTickets() || [];
+                            const foundRow = allT.find(t => t.qr_code === normalized || String(t.id) === normalized);
                             if (foundRow) {
                                 const detailed = buildTicketDetails(foundRow);
                                 return navigation.replace('TicketDetail', { ticket: detailed });
                             }
-                            return Alert.alert('Không tìm thấy vé với mã này');
+                            return Alert.alert('Không tìm thấy vé hoặc booking với mã này');
                         }}
                     >
                         <Text style={{ color: '#fff' }}>Tìm</Text>
