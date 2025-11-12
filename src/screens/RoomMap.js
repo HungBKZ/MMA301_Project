@@ -222,6 +222,12 @@ export default function RoomMap({ route, navigation }) {
             Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
             return;
         }
+        // Validate selection rules immediately and prevent invalid picks
+        const validation = validateSelection(next);
+        if (!validation.ok) {
+            Alert.alert('Không hợp lệ', validation.reason);
+            return;
+        }
         setSelectedSet(next);
     };
 
@@ -287,6 +293,18 @@ export default function RoomMap({ route, navigation }) {
                                                             u.seats.forEach(x => next.delete(x.id));
                                                         } else {
                                                             u.seats.forEach(x => next.add(x.id));
+                                                        }
+                                                        // Enforce max seats
+                                                        const totals = computeTotals(next);
+                                                        if (totals.totalSeats > 6) {
+                                                            Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
+                                                            return;
+                                                        }
+                                                        // Validate and prevent leaving single gaps
+                                                        const validation = validateSelection(next);
+                                                        if (!validation.ok) {
+                                                            Alert.alert('Không hợp lệ', validation.reason);
+                                                            return;
                                                         }
                                                         setSelectedSet(next);
                                                     }}

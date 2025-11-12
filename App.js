@@ -40,7 +40,8 @@ import UserHomeScreen from "./src/screens/userScreens/UserHomeScreen";
 import MapsScreen from "./src/screens/userScreens/MapsScreen";
 import ShowtimeScreen from "./src/screens/ShowtimeScreen";
 import RoomMap from "./src/screens/RoomMap";
-import CheckoutScreen from "./src/screens/CheckoutScreen";
+// Use the payment-enabled checkout implementation
+import CheckoutScreen from "./src/payment/CheckoutScreen";
 
 // 🎨 Import colors
 import { colors } from "./src/styles/commonStyles";
@@ -129,6 +130,16 @@ function HomeStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
+        name="RoomMap"
+        component={RoomMap}
+        options={{ title: "Chọn ghế" }}
+      />
+      <Stack.Screen
+        name="Checkout"
+        component={CheckoutScreen}
+        options={{ title: "Thanh toán" }}
       />
       <Stack.Screen
         name="ReviewList"
