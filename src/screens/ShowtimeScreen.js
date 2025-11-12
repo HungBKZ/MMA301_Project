@@ -66,7 +66,7 @@ export default function ShowtimeScreen({ route, navigation }) {
         }
 
         try {
-            // Đảm bảo bảng showtimes đã được seed (idempotent)
+            // Ensure showtimes table is seeded (idempotent)
             ensureShowtimesSeeded();
             const raw = getShowtimesByMovieId(movieId);
             // console.log('Fetched showtimes for movieId', movieId, raw);
@@ -243,7 +243,7 @@ export default function ShowtimeScreen({ route, navigation }) {
                                                         </Text>
                                                     </View>
                                                 </View>
-                                                <Text style={styles.timeSubText}>Ghế trống</Text>
+                                                <Text style={styles.timeSubText}>Available Seats</Text>
                                                 {/* <Text style={styles.timeMetaText}>{st.show_date}</Text> */}
                                             </TouchableOpacity>
                                         );

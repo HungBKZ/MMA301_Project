@@ -342,6 +342,16 @@ function CollectionsStack() {
         component={CollectionDetailScreen}
         options={{ title: "Collection" }}
       />
+      <Stack.Screen
+        name="MovieDetail"
+        component={MovieDetailScreen}
+        options={{ title: "Movie Details" }}
+      />
+      <Stack.Screen
+        name="ReviewList"
+        component={ReviewListScreen}
+        options={{ title: "Reviews Movie" }}
+      />
     </Stack.Navigator>
   );
 }

@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Image,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   getCollectionMovies,
@@ -59,18 +60,43 @@ export default function CollectionDetailScreen({ route, navigation }) {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.movieCard}>
-      <View style={styles.poster}>
-        <Ionicons name="film-outline" size={22} color={colors.primary} />
+    <TouchableOpacity
+      style={styles.movieCard}
+      activeOpacity={0.85}
+      onPress={() => navigation.navigate('MovieDetail', { movieId: item.id })}
+    >
+      {item.poster_uri ? (
+        <Image source={{ uri: item.poster_uri }} style={styles.moviePoster} />
+      ) : (
+        <View style={[styles.moviePoster, styles.posterPlaceholder]}>
+          <MaterialCommunityIcons name="movie-open-outline" size={28} color={colors.textSecondary} />
+        </View>
+      )}
+      <View style={styles.movieInfo}>
+        <Text style={styles.movieTitle} numberOfLines={1}>{item.title}</Text>
+        <Text style={styles.movieMeta} numberOfLines={1}>
+          {item.category || 'Unknown genre'} • {item.release_year || 'N/A'}
+        </Text>
+        <View style={styles.movieStatusRow}>
+          <View style={[styles.movieBadge, getStatusBadgeStyle(item.status)]}>
+            <Text style={styles.movieBadgeText}>{formatStatusLabel(item.status)}</Text>
+          </View>
+          {item.duration_minutes ? (
+            <View style={styles.movieDuration}>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={styles.movieDurationText}>{item.duration_minutes} min</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.meta}>{item.category} • {item.release_year}</Text>
-      </View>
-      <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item.id)}>
-        <Ionicons name="close-circle-outline" size={22} color={colors.danger || "#E53935"} />
+      <TouchableOpacity
+        style={styles.movieRemoveBtn}
+        onPress={() => handleRemove(item.id)}
+        activeOpacity={0.8}
+      >
+        <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.error} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 
   const Header = () => (
@@ -92,15 +118,47 @@ export default function CollectionDetailScreen({ route, navigation }) {
 
   return (
     <View style={commonStyles.container}>
-      <Header />
+      <View style={styles.headerCard}>
+        <View>
+          <Text style={styles.headerTitle}>{collectionName}</Text>
+          <Text style={styles.headerSubtitle}>
+            {movies.length > 0
+              ? `${movies.length} ${movies.length === 1 ? 'movie saved' : 'movies saved'} in this collection.`
+              : 'Keep track of the movies you love in one place.'}
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="bookmark-multiple-outline" size={36} color={colors.primary} />
+      </View>
+
+      <View style={styles.addCard}>
+        <Text style={styles.addTitle}>Add movie by ID</Text>
+        <Text style={styles.addSubtitle}>Enter a movie ID from the catalog to include it here.</Text>
+        <View style={styles.addRow}>
+          <TextInput
+            value={movieIdInput}
+            onChangeText={setMovieIdInput}
+            placeholder="Movie ID"
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="numeric"
+            style={styles.input}
+          />
+          <TouchableOpacity style={styles.addBtn} onPress={handleAddMovie}>
+            <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+            <Text style={styles.addBtnText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <FlatList
         data={movies}
         keyExtractor={(it) => String(it.id)}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={
+          movies.length === 0 ? styles.emptyList : styles.listContent
+        }
         ListEmptyComponent={
           <View style={commonStyles.emptyContainer}>
-            <Ionicons name="film-outline" size={72} color={colors.textSecondary} />
+            <MaterialCommunityIcons name="movie-open-check-outline" size={72} color={colors.textSecondary} />
             <Text style={commonStyles.emptyText}>No movies in this collection</Text>
           </View>
         }
@@ -109,67 +167,191 @@ export default function CollectionDetailScreen({ route, navigation }) {
   );
 }
 
+const getStatusBadgeStyle = (status) => {
+  switch (status) {
+    case 'SHOWING':
+      return { backgroundColor: 'rgba(129, 199, 132, 0.25)', borderColor: '#81C784', color: '#2E7D32' };
+    case 'COMING_SOON':
+      return { backgroundColor: 'rgba(255, 183, 77, 0.25)', borderColor: '#FFB74D', color: '#EF6C00' };
+    case 'ENDED':
+      return { backgroundColor: 'rgba(158, 158, 158, 0.2)', borderColor: '#B0BEC5', color: '#546E7A' };
+    default:
+      return { backgroundColor: 'rgba(107, 155, 209, 0.2)', borderColor: colors.primary, color: colors.primary };
+  }
+};
+
+const formatStatusLabel = (status) => {
+  switch (status) {
+    case 'SHOWING':
+      return 'Now Showing';
+    case 'COMING_SOON':
+      return 'Coming Soon';
+    case 'ENDED':
+      return 'Ended';
+    default:
+      return status || 'Unknown';
+  }
+};
+
 const styles = StyleSheet.create({
+  headerCard: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 16,
+    padding: 22,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  headerSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  addCard: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  addTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  addSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
   addRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   input: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     color: colors.textPrimary,
-    marginRight: 8,
+    backgroundColor: colors.background,
   },
   addBtn: {
-    flexDirection: "row",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
   },
   addBtnText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    marginLeft: 6,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 140,
+    gap: 12,
+  },
+  emptyList: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   movieCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 18,
     padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  poster: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary + "22",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+  moviePoster: {
+    width: 70,
+    height: 100,
+    borderRadius: 12,
+    backgroundColor: colors.border,
   },
-  title: {
+  posterPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  movieInfo: {
+    flex: 1,
+    gap: 6,
+  },
+  movieTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '700',
     color: colors.textPrimary,
   },
-  meta: {
+  movieMeta: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  movieStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  movieBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  movieBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  movieDuration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  movieDurationText: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 4,
   },
-  removeBtn: {
-    padding: 6,
-    marginLeft: 8,
+  movieRemoveBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

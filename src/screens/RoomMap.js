@@ -196,16 +196,16 @@ export default function RoomMap({ route, navigation }) {
 
             // Left edge: cannot leave exactly one FREE at the start followed by taken
             if (n >= 2 && status[0] === 'FREE' && taken(status[1])) {
-                return { ok: false, reason: 'Không được chừa trống 1 ghế ở đầu hàng.' };
+                return { ok: false, reason: 'Cannot leave 1 empty seat at the beginning of the row.' };
             }
             // Right edge
             if (n >= 2 && status[n - 1] === 'FREE' && taken(status[n - 2])) {
-                return { ok: false, reason: 'Không được chừa trống 1 ghế ở cuối hàng.' };
+                return { ok: false, reason: 'Cannot leave 1 empty seat at the end of the row.' };
             }
             // Middle single gaps
             for (let i = 1; i < n - 1; i++) {
                 if (status[i] === 'FREE' && taken(status[i - 1]) && taken(status[i + 1])) {
-                    return { ok: false, reason: 'Không được để trống 1 ghế giữa 2 ghế đã chọn/đã đặt.' };
+                    return { ok: false, reason: 'Cannot leave 1 empty seat between 2 selected/reserved seats.' };
                 }
             }
         }
@@ -219,7 +219,7 @@ export default function RoomMap({ route, navigation }) {
         // Only enforce max seats here
         const totals = computeTotals(next);
         if (totals.totalSeats > 6) {
-            Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
+            Alert.alert('Limit', 'You can only select up to 6 seats.');
             return;
         }
         setSelectedSet(next);
@@ -228,20 +228,20 @@ export default function RoomMap({ route, navigation }) {
     return (
         <View style={[commonStyles.container, styles.container]}>
             <View style={styles.headerInfo}>
-                <Text style={styles.title}>{cinemaName || "Rạp"}</Text>
+                <Text style={styles.title}>{cinemaName || "Cinema"}</Text>
                 {!!movieTitle && <Text style={styles.subTitle}>{movieTitle}</Text>}
                 {!!startTime && <Text style={styles.subMeta}>{startTime}</Text>}
-                <Text style={styles.subMeta}>Phòng: {roomId} • Ghế trống {available}/{total}</Text>
+                <Text style={styles.subMeta}>Room: {roomId} • Available seats {available}/{total}</Text>
             </View>
 
             <View style={styles.screenBox}>
                 <View style={styles.screenBar} />
-                <Text style={styles.screenText}>MÀN HÌNH</Text>
+                <Text style={styles.screenText}>SCREEN</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.mapContainer}>
                 {rows.length === 0 ? (
-                    <View style={styles.empty}><Text style={{ color: colors.textSecondary }}>Không có dữ liệu ghế cho phòng này.</Text></View>
+                    <View style={styles.empty}><Text style={{ color: colors.textSecondary }}>No seat data for this room.</Text></View>
                 ) : (
                     rows.map(row => {
                         // Prepare display units: couple pairs on row G -> (1,2) and (3,4) only
@@ -312,17 +312,17 @@ export default function RoomMap({ route, navigation }) {
             </ScrollView>
 
             <View style={styles.legend}>
-                <LegendItem color="#E9ECEF" label="Đã đặt/giữ" />
-                <LegendItem color="#F8E0EC" borderColor="#F48FB1" label="Ghế bạn chọn" />
-                <LegendItem color="#FFFFFF" borderColor={colors.border} label="Ghế thường" />
-                <LegendItem color="#FFF3E0" borderColor={colors.accent} label="Ghế VIP" />
-                <LegendItem color="#EDE7F6" borderColor="#B39DDB" label="Ghế COUPLE" />
+                <LegendItem color="#E9ECEF" label="Reserved/Held" />
+                <LegendItem color="#F8E0EC" borderColor="#F48FB1" label="Your Selection" />
+                <LegendItem color="#FFFFFF" borderColor={colors.border} label="Standard" />
+                <LegendItem color="#FFF3E0" borderColor={colors.accent} label="VIP" />
+                <LegendItem color="#EDE7F6" borderColor="#B39DDB" label="COUPLE" />
             </View>
 
             <View style={styles.bottomBar}>
                 {(() => {
                     const t = computeTotals(); return (
-                        <Text style={styles.bottomText}>Đang chọn: {t.totalSeats} • Tổng: {formatVND(t.totalPrice)}</Text>
+                        <Text style={styles.bottomText}>Selected: {t.totalSeats} • Total: {formatVND(t.totalPrice)}</Text>
                     );
                 })()}
                 <TouchableOpacity
@@ -331,7 +331,7 @@ export default function RoomMap({ route, navigation }) {
                         if (!selectedSet.size) return;
                         const validation = validateSelection(selectedSet);
                         if (!validation.ok) {
-                            Alert.alert('Không hợp lệ', validation.reason);
+                            Alert.alert('Invalid', validation.reason);
                             return;
                         }
                         const t = computeTotals();
@@ -348,7 +348,7 @@ export default function RoomMap({ route, navigation }) {
                         });
                     }}
                 >
-                    <Text style={styles.continueText}>Tiếp tục</Text>
+                    <Text style={styles.continueText}>Continue</Text>
                 </TouchableOpacity>
             </View>
         </View>

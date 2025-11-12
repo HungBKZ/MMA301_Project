@@ -29,19 +29,19 @@ export default function ChangePasswordScreen({ navigation }) {
 
     const handleChange = async () => {
         if (!authUser || !authUser.email || !authUser.id) {
-            Alert.alert("Lỗi", "Không xác định được tài khoản.");
+            Alert.alert("Error", "Cannot identify account.");
             return;
         }
         if (!oldPass || !newPass || !confirm) {
-            Alert.alert("Lỗi", "Vui lòng nhập đầy đủ các trường.");
+            Alert.alert("Error", "Please fill in all fields.");
             return;
         }
         if (newPass.length < 6) {
-            Alert.alert("Lỗi", "Mật khẩu mới phải ít nhất 6 ký tự.");
+            Alert.alert("Error", "New password must be at least 6 characters.");
             return;
         }
         if (newPass !== confirm) {
-            Alert.alert("Lỗi", "Mật khẩu mới và xác nhận không khớp.");
+            Alert.alert("Error", "New password and confirmation do not match.");
             return;
         }
 
@@ -51,11 +51,11 @@ export default function ChangePasswordScreen({ navigation }) {
             const authRes = await authenticate(emailClean, oldPass);
             if (!authRes.success) {
                 if (authRes.error === "NO_USER") {
-                    Alert.alert("Lỗi", "Không tìm thấy tài khoản.");
+                    Alert.alert("Error", "Account not found.");
                 } else if (authRes.error === "INVALID_CREDENTIALS") {
-                    Alert.alert("Lỗi", "Mật khẩu cũ không đúng.");
+                    Alert.alert("Error", "Old password is incorrect.");
                 } else {
-                    Alert.alert("Lỗi", "Xác thực thất bại.");
+                    Alert.alert("Error", "Authentication failed.");
                 }
                 setLoading(false);
                 return;
@@ -63,15 +63,15 @@ export default function ChangePasswordScreen({ navigation }) {
 
             const ok = await updateUserPassword(authUser.id, newPass);
             if (ok) {
-                Alert.alert("Thành công", "Mật khẩu đã được cập nhật.", [
+                Alert.alert("Success", "Password has been updated.", [
                     { text: "OK", onPress: () => navigation.goBack() },
                 ]);
             } else {
-                Alert.alert("Lỗi", "Không thể cập nhật mật khẩu. Thử lại sau.");
+                Alert.alert("Error", "Cannot update password. Please try again later.");
             }
         } catch (e) {
             console.error("ChangePassword error:", e);
-            Alert.alert("Lỗi", "Có lỗi xảy ra.");
+            Alert.alert("Error", "An error occurred.");
         } finally {
             setLoading(false);
         }
@@ -80,44 +80,44 @@ export default function ChangePasswordScreen({ navigation }) {
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
             <View style={styles.card}>
-                <Text style={styles.title}>Đổi mật khẩu</Text>
+                <Text style={styles.title}>Change Password</Text>
 
-                <Text style={styles.label}>Mật khẩu hiện tại</Text>
+                <Text style={styles.label}>Current Password</Text>
                 <View style={styles.passwordRow}>
                     <TextInput
                         style={[styles.input, { paddingRight: 44 }]}
                         secureTextEntry={!showOld}
                         value={oldPass}
                         onChangeText={setOldPass}
-                        placeholder="Nhập mật khẩu hiện tại"
+                        placeholder="Enter current password"
                     />
                     <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowOld((s) => !s)}>
                         <Ionicons name={showOld ? "eye-off" : "eye"} size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.label}>Mật khẩu mới</Text>
+                <Text style={styles.label}>New Password</Text>
                 <View style={styles.passwordRow}>
                     <TextInput
                         style={[styles.input, { paddingRight: 44 }]}
                         secureTextEntry={!showNew}
                         value={newPass}
                         onChangeText={setNewPass}
-                        placeholder="Mật khẩu mới (>=6 ký tự)"
+                        placeholder="New password (>=6 characters)"
                     />
                     <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowNew((s) => !s)}>
                         <Ionicons name={showNew ? "eye-off" : "eye"} size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
-                <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
+                <Text style={styles.label}>Confirm New Password</Text>
                 <View style={styles.passwordRow}>
                     <TextInput
                         style={[styles.input, { paddingRight: 44 }]}
                         secureTextEntry={!showConfirm}
                         value={confirm}
                         onChangeText={setConfirm}
-                        placeholder="Nhập lại mật khẩu mới"
+                        placeholder="Re-enter new password"
                     />
                     <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm((s) => !s)}>
                         <Ionicons name={showConfirm ? "eye-off" : "eye"} size={20} color={colors.textSecondary} />
@@ -125,11 +125,11 @@ export default function ChangePasswordScreen({ navigation }) {
                 </View>
 
                 <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleChange} disabled={loading}>
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Cập nhật mật khẩu</Text>}
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Update Password</Text>}
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-                    <Text style={styles.cancelText}>Quay lại</Text>
+                    <Text style={styles.cancelText}>Go Back</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>

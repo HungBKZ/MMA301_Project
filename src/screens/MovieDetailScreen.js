@@ -533,30 +533,49 @@ const MovieDetailScreen = ({ route, navigation }) => {
                   style={[styles.actionButton, { backgroundColor: colors.primary }]}
                   onPress={() => setIsEditing(true)}
                 >
-                  <Ionicons name="create" size={20} color="#FFFFFF" />
+                  <Ionicons name="create" size={18} color="#FFFFFF" />
                   <Text style={styles.actionButtonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.warning }]}
                   onPress={handleChangeStatus}
                 >
-                  <Ionicons name="swap-horizontal" size={20} color="#FFFFFF" />
+                  <Ionicons name="swap-horizontal" size={18} color="#FFFFFF" />
                   <Text style={styles.actionButtonText}>Change{"\n"}Status</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.error }]}
                   onPress={handleDelete}
                 >
-                  <Ionicons name="trash" size={20} color="#FFFFFF" />
+                  <Ionicons name="trash" size={18} color="#FFFFFF" />
                   <Text style={styles.actionButtonText}>Delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#9C27B0' }]}
+                  onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
+                >
+                  <Ionicons name="chatbubbles" size={18} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Review</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* User Actions - Show for all users */}
+            {/* Review button - Show for non-admin users */}
+            {user?.role !== 'admin' && (
+              <View style={styles.actionContainer}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#9C27B0' }]}
+                  onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
+                >
+                  <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Review</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* User Actions - Show only for non-admin users */}
             {user?.role !== 'admin' && (
-              <View style={[styles.actionContainer, { marginTop: user?.role === 'admin' ? 12 : 0 }]}>
+              <View style={styles.actionContainer}>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
                   onPress={handleAddToWishlist}
@@ -570,14 +589,6 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 >
                   <Ionicons name="albums" size={20} color="#FFFFFF" />
                   <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: '#9C27B0' }]}
-                  onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
-                >
-                  <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
-                  <Text style={styles.actionButtonText}>Review</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -750,22 +761,23 @@ const styles = StyleSheet.create({
   actionContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 6,
   },
   actionButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginHorizontal: 4,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginHorizontal: 2,
+    minWidth: 0,
   },
   actionButtonText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 4,
   },
   modalBackdrop: {
     flex: 1,

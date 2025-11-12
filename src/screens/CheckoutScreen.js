@@ -114,9 +114,9 @@ export default function CheckoutScreen({ route, navigation }) {
 					const booking_code = `BK-${stamp}-${rand}`;
 
 					const userId = user?.id ?? null;
-					// Tạo booking PENDING để gom tickets
-					const addRes = addBooking(booking_code, userId, showtimeId, 'PENDING', breakdown.total, 0, breakdown.total, 'NONE', null, holdExpires, `${selectedSeatIds.length} vé ${movieTitle || ''}`);
-					if (!addRes.success) throw new Error('Không thể khởi tạo giữ ghế');
+					// Create PENDING booking to group tickets
+					const addRes = addBooking(booking_code, userId, showtimeId, 'PENDING', breakdown.total, 0, breakdown.total, 'NONE', null, holdExpires, `${selectedSeatIds.length} tickets ${movieTitle || ''}`);
+					if (!addRes.success) throw new Error('Cannot initialize seat hold');
 					const newBookingId = addRes.id;
 
 					// Tạo tickets HELD
@@ -131,10 +131,10 @@ export default function CheckoutScreen({ route, navigation }) {
 							if (left && right) {
 								const perSeatPrice = line.price / 2;
 								const r1 = addTicket(showtimeId, left.id, newBookingId, userId, perSeatPrice, 'HELD', holdExpires, `QR-${booking_code}-${row}${nums[0]}`, null);
-								if (!r1.success) throw new Error('Một số ghế đã được giữ bởi người khác');
+								if (!r1.success) throw new Error('Some seats are already held by others');
 								created.push(r1.id);
 								const r2 = addTicket(showtimeId, right.id, newBookingId, userId, perSeatPrice, 'HELD', holdExpires, `QR-${booking_code}-${row}${nums[1]}`, null);
-								if (!r2.success) throw new Error('Một số ghế đã được giữ bởi người khác');
+								if (!r2.success) throw new Error('Some seats are already held by others');
 								created.push(r2.id);
 							}
 						} else {
@@ -145,7 +145,7 @@ export default function CheckoutScreen({ route, navigation }) {
 							const seatObj = selectedSeatsDetailed.find(s => s.row_label === row && s.seat_number === num);
 							if (seatObj) {
 								const r = addTicket(showtimeId, seatObj.id, newBookingId, userId, line.price, 'HELD', holdExpires, `QR-${booking_code}-${row}${num}`, null);
-								if (!r.success) throw new Error('Một số ghế đã được giữ bởi người khác');
+								if (!r.success) throw new Error('Some seats are already held by others');
 								created.push(r.id);
 							}
 						}
@@ -154,8 +154,8 @@ export default function CheckoutScreen({ route, navigation }) {
 					setBookingId(newBookingId);
 				} catch (e) {
 					console.error('Hold error:', e);
-					setError(e.message || 'Không thể giữ ghế');
-					Alert.alert('Giữ ghế thất bại', e.message || 'Vui lòng chọn lại', [
+					setError(e.message || 'Cannot hold seats');
+					Alert.alert('Seat Hold Failed', e.message || 'Please select again', [
 						{ text: 'OK', onPress: () => navigation.goBack() }
 					]);
 				} finally {
@@ -183,10 +183,10 @@ export default function CheckoutScreen({ route, navigation }) {
 			const unsub = navigation.addListener('beforeRemove', (e) => {
 				if (!bookingId || isPaid) return; // no hold or already paid
 				e.preventDefault();
-				Alert.alert('Huỷ giữ ghế?', 'Bạn sẽ mất giữ chỗ nếu rời trang này.', [
-					{ text: 'Ở lại', style: 'cancel' },
+				Alert.alert('Cancel Seat Hold?', 'You will lose your seat reservation if you leave this page.', [
+					{ text: 'Stay', style: 'cancel' },
 					{
-						text: 'Huỷ và rời', style: 'destructive', onPress: () => {
+						text: 'Cancel & Leave', style: 'destructive', onPress: () => {
 							releaseHold();
 							navigation.dispatch(e.data.action);
 						}
@@ -216,12 +216,12 @@ export default function CheckoutScreen({ route, navigation }) {
 							checked_in_at: t.checked_in_at,
 						};
 						const r = updateTicket(t.id, fields);
-						if (!r.success) throw new Error('Không thể cập nhật vé');
+						if (!r.success) throw new Error('Cannot update ticket');
 					}
 
 					// 2) Update booking to PAID
 					const bk = getBookingById(bookingId);
-					if (!bk) throw new Error('Không tìm thấy booking');
+					if (!bk) throw new Error('Booking not found');
 					const updateRes = updateBooking(bookingId, {
 						booking_code: bk.booking_code,
 						user_id: bk.user_id,
@@ -235,15 +235,15 @@ export default function CheckoutScreen({ route, navigation }) {
 						hold_expires_at: null,
 						notes: bk.notes,
 					});
-					if (!updateRes.success) throw new Error('Không thể xác nhận thanh toán');
+					if (!updateRes.success) throw new Error('Cannot confirm payment');
 
 					setIsPaid(true);
-					Alert.alert('Thành công', 'Thanh toán thành công. Vé đã được xác nhận.');
+					Alert.alert('Success', 'Payment successful. Tickets have been confirmed.');
 					navigation.popToTop();
 				} catch (e) {
 					console.error('Confirm error:', e);
-					setError(e.message || 'Không thể hoàn tất thanh toán');
-					Alert.alert('Lỗi', e.message || 'Thanh toán thất bại');
+					setError(e.message || 'Cannot complete payment');
+					Alert.alert('Error', e.message || 'Payment failed');
 				} finally {
 					setLoading(false);
 				}
@@ -252,14 +252,14 @@ export default function CheckoutScreen({ route, navigation }) {
 	return (
 		<View style={[commonStyles.container, styles.container]}>      
 					<ScrollView contentContainerStyle={styles.scroll}>
-				<Text style={styles.heading}>Xác nhận đặt vé</Text>
+				<Text style={styles.heading}>Confirm Booking</Text>
 				{movieTitle && <Text style={styles.movie}>{movieTitle}</Text>}
 				{cinemaName && <Text style={styles.meta}>{cinemaName}</Text>}
 				{startTime && <Text style={styles.meta}>{startTime}</Text>}
-				<Text style={styles.meta}>Phòng: {roomId}</Text>
+				<Text style={styles.meta}>Room: {roomId}</Text>
 				<View style={styles.divider} />
-				<Text style={styles.sectionTitle}>Ghế đã chọn ({selectedSeatIds.length})</Text>
-				{selectedSeatsDetailed.length === 0 && <Text style={styles.empty}>Không có ghế.</Text>}
+				<Text style={styles.sectionTitle}>Selected Seats ({selectedSeatIds.length})</Text>
+				{selectedSeatsDetailed.length === 0 && <Text style={styles.empty}>No seats selected.</Text>}
 						{breakdown.lines.map((l, idx) => (
 					<View key={idx} style={styles.lineRow}>
 						<Text style={styles.lineLabel}>{l.label}</Text>
@@ -268,15 +268,15 @@ export default function CheckoutScreen({ route, navigation }) {
 				))}
 				<View style={styles.divider} />
 				<View style={styles.totalRow}>
-					<Text style={styles.totalLabel}>Tạm tính</Text>
+					<Text style={styles.totalLabel}>Subtotal</Text>
 					<Text style={styles.totalValue}>{formatVND(breakdown.total)}</Text>
 				</View>
 				<View style={styles.totalRow}>
-					<Text style={styles.totalLabel}>Giảm giá</Text>
+					<Text style={styles.totalLabel}>Discount</Text>
 					<Text style={[styles.totalValue, { color: colors.success }]}>0đ</Text>
 				</View>
 				<View style={styles.totalRow}>
-					<Text style={styles.grandLabel}>Tổng thanh toán</Text>
+					<Text style={styles.grandLabel}>Total Payment</Text>
 					<Text style={styles.grandValue}>{formatVND(breakdown.total)}</Text>
 				</View>
 				{error && <Text style={styles.error}>{error}</Text>}
@@ -287,7 +287,7 @@ export default function CheckoutScreen({ route, navigation }) {
 							disabled={loading || initializingHold}
 							onPress={onConfirm}
 						>
-							{loading || initializingHold ? <ActivityIndicator color="#fff" /> : <Text style={styles.payText}>Xác nhận & Thanh toán</Text>}
+							{loading || initializingHold ? <ActivityIndicator color="#fff" /> : <Text style={styles.payText}>Confirm & Pay</Text>}
 						</TouchableOpacity>
 					</View>
 		</View>

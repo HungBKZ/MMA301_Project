@@ -51,7 +51,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 }
 
                 if (!user) {
-                    Alert.alert("Lỗi", "Không tìm thấy tài khoản để cập nhật.", [
+                    Alert.alert("Error", "Account not found for update.", [
                         { text: "OK", onPress: () => navigation.goBack() },
                     ]);
                     return;
@@ -64,7 +64,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 setDateOfBirth(user.date_of_birth || "");
                 setGender(user.gender || "");
             } catch (e) {
-                Alert.alert("Lỗi", "Không thể tải dữ liệu tài khoản.");
+                Alert.alert("Error", "Cannot load account data.");
             } finally {
                 await ImagePicker.requestMediaLibraryPermissionsAsync();
                 setInitLoading(false);
@@ -113,7 +113,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
         try {
             const resolvedId = userId || authUser?.id;
             if (!resolvedId) {
-                setErr("Không xác định được tài khoản để cập nhật.");
+                setErr("Cannot identify account to update.");
                 setLoading(false);
                 return;
             }
@@ -124,18 +124,18 @@ export default function UpdateProfileScreen({ navigation, route }) {
             const finalGender = gender && gender !== "" ? gender : (existing.gender || "");
 
             if (!finalPhone || !finalDob || !finalGender) {
-                setErr("Vui lòng nhập số điện thoại, ngày sinh và giới tính.");
+                setErr("Please enter phone number, date of birth and gender.");
                 setLoading(false);
                 return;
             }
 
             if (!isPhoneValid(finalPhone)) {
-                setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
+                setErr("Phone number must have 10 digits and start with 0.");
                 setLoading(false);
                 return;
             }
             if (!isDobValid(finalDob)) {
-                setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
+                setErr("Invalid date of birth or under 13 years old.");
                 setLoading(false);
                 return;
             }
@@ -163,15 +163,15 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         });
                     }
                 } catch (e) { }
-                Alert.alert("Thành công", "Cập nhật tài khoản thành công!", [
+                Alert.alert("Success", "Account updated successfully!", [
                     { text: "OK", onPress: () => navigation.goBack() },
                 ]);
             } else {
-                setErr("Cập nhật thất bại.");
+                setErr("Update failed.");
             }
         } catch (e) {
             console.error("UpdateProfile error:", e);
-            setErr("Lỗi khi cập nhật.");
+            setErr("Error updating.");
         } finally {
             setLoading(false);
         }
@@ -181,7 +181,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+                <Text style={styles.loadingText}>Loading data...</Text>
             </View>
         );
     }
@@ -206,7 +206,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.primary} />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Cập nhật hồ sơ</Text>
+                        <Text style={styles.headerTitle}>Update Profile</Text>
                         <View style={{ width: 40 }} />
                     </View>
 
@@ -240,18 +240,18 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                 ) : (
                                     <View style={styles.avatarPlaceholder}>
                                         <Ionicons name="camera" size={32} color={colors.accent} />
-                                        <Text style={styles.avatarText}>Đổi ảnh</Text>
+                                        <Text style={styles.avatarText}>Change Photo</Text>
                                     </View>
                                 )}
                             </TouchableOpacity>
 
                             <View style={styles.profileInfoColumn}>
                                 <View style={styles.inputGroupSmall}>
-                                    <Text style={styles.inputLabel}>Họ tên</Text>
+                                    <Text style={styles.inputLabel}>Full Name</Text>
                                     <View style={styles.inputWrapperSmall}>
                                         <Ionicons name="person" size={18} color={colors.accent} style={styles.inputIcon} />
                                         <TextInput
-                                            placeholder="Nhập họ tên"
+                                            placeholder="Enter full name"
                                             value={name}
                                             onChangeText={setName}
                                             style={styles.inputFieldSmall}
@@ -279,11 +279,11 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
                     {/* ==================== CONTACT INFO SECTION ==================== */}
                     <View style={styles.formSection}>
-                        <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
+                        <Text style={styles.sectionTitle}>Contact Information</Text>
 
                         <View style={styles.rowContainer}>
                             <View style={[styles.inputGroup, styles.halfWidth]}>
-                                <Text style={styles.inputLabel}>Số điện thoại *</Text>
+                                <Text style={styles.inputLabel}>Phone Number *</Text>
                                 <View style={styles.inputWrapper}>
                                     <Ionicons name="call" size={18} color={colors.accent} style={styles.inputIcon} />
                                     <TextInput
@@ -298,7 +298,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                             </View>
 
                             <View style={[styles.inputGroup, styles.halfWidth]}>
-                                <Text style={styles.inputLabel}>Ngày sinh *</Text>
+                                <Text style={styles.inputLabel}>Date of Birth *</Text>
                                 <TouchableOpacity
                                     style={styles.inputWrapper}
                                     onPress={() => setShowDatePicker(true)}
@@ -311,7 +311,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                             { color: dateOfBirth ? colors.textPrimary : colors.textSecondary },
                                         ]}
                                     >
-                                        {dateOfBirth || "Chọn ngày"}
+                                        {dateOfBirth || "Select date"}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -329,7 +329,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
                         {/* Gender */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Giới tính *</Text>
+                            <Text style={styles.inputLabel}>Gender *</Text>
                             <View style={styles.pickerWrapper}>
                                 <Ionicons name="people" size={18} color={colors.accent} style={styles.inputIcon} />
                                 <Picker
@@ -338,10 +338,10 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                     mode="dropdown"
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Chọn giới tính..." value="" />
-                                    <Picker.Item label="Nam" value="male" />
-                                    <Picker.Item label="Nữ" value="female" />
-                                    <Picker.Item label="Khác" value="other" />
+                                    <Picker.Item label="Select gender..." value="" />
+                                    <Picker.Item label="Male" value="male" />
+                                    <Picker.Item label="Female" value="female" />
+                                    <Picker.Item label="Other" value="other" />
                                 </Picker>
                             </View>
                         </View>
@@ -352,13 +352,13 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         <View style={styles.infoRow}>
                             <Ionicons name="shield-checkmark" size={18} color={colors.accent} />
                             <Text style={styles.infoText}>
-                                Các trường có dấu <Text style={{ color: colors.primary }}>*</Text> là bắt buộc
+                                Fields marked with <Text style={{ color: colors.primary }}>*</Text> are required
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
                             <Ionicons name="information-circle" size={18} color={colors.accent} />
                             <Text style={styles.infoText}>
-                                Email không thể thay đổi vì lý do bảo mật
+                                Email cannot be changed for security reasons
                             </Text>
                         </View>
                     </View>
@@ -375,7 +375,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         ) : (
                             <>
                                 <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
-                                <Text style={styles.updateButtonText}>Cập nhật hồ sơ</Text>
+                                <Text style={styles.updateButtonText}>Update Profile</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -386,7 +386,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         activeOpacity={0.85}
                     >
                         <Ionicons name="arrow-back" size={18} color={colors.primary} />
-                        <Text style={styles.cancelButtonText}>Quay lại</Text>
+                        <Text style={styles.cancelButtonText}>Go Back</Text>
                     </TouchableOpacity>
 
                     <View style={{ height: 30 }} />

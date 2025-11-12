@@ -10,7 +10,7 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../auth/AuthContext";
 import {
@@ -103,27 +103,38 @@ export default function CollectionsListScreen({ navigation }) {
     );
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.collectionCard}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("CollectionDetail", { collectionId: item.id, collectionName: item.name })}
-    >
-      <View style={styles.iconWrap}>
-        <Ionicons name="albums" size={24} color={colors.primary} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.collectionName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.collectionMeta}>{new Date(item.created_at).toLocaleString()}</Text>
-      </View>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => openRenameModal(item)}>
-        <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
+  const renderItem = ({ item }) => {
+    const createdAt = new Date(item.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    return (
+      <TouchableOpacity
+        style={styles.collectionCard}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate("CollectionDetail", { collectionId: item.id, collectionName: item.name })}
+      >
+        <View style={styles.collectionIconWrap}>
+          <MaterialCommunityIcons name="folder-multiple" size={26} color={colors.primary} />
+        </View>
+        <View style={styles.collectionInfo}>
+          <Text style={styles.collectionName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.collectionMeta}>Created {createdAt}</Text>
+        </View>
+        <View style={styles.collectionActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => openRenameModal(item)}>
+            <MaterialCommunityIcons name="square-edit-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(item)}>
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.error} />
+          </TouchableOpacity>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+        </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => handleDelete(item)}>
-        <Ionicons name="trash-outline" size={20} color={colors.danger || "#E53935"} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const EmptyList = () => (
     <View style={commonStyles.emptyContainer}>
@@ -132,13 +143,22 @@ export default function CollectionsListScreen({ navigation }) {
     </View>
   );
 
+  const totalCollections = collections.length;
+
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Your Collections</Text>
-        <TouchableOpacity style={styles.createBtn} onPress={openCreateModal} activeOpacity={0.8}>
+      <View style={styles.headerCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Your Collections</Text>
+          <Text style={styles.headerSubtitle}>
+            {totalCollections > 0
+              ? `You have ${totalCollections} curated ${totalCollections === 1 ? 'collection' : 'collections'}.`
+              : 'Group movies into themed lists for faster discovery.'}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.createButton} onPress={openCreateModal} activeOpacity={0.85}>
           <Ionicons name="add" size={20} color="#FFFFFF" />
-          <Text style={styles.createBtnText}>Create</Text>
+          <Text style={styles.createButtonText}>New collection</Text>
         </TouchableOpacity>
       </View>
 
@@ -148,7 +168,9 @@ export default function CollectionsListScreen({ navigation }) {
         renderItem={renderItem}
         ListEmptyComponent={EmptyList}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={
+          totalCollections === 0 ? styles.emptyList : styles.listContent
+        }
       />
 
       <Modal
@@ -183,62 +205,109 @@ export default function CollectionsListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  headerCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 16,
+    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    gap: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 22,
     fontWeight: "700",
     color: colors.textPrimary,
   },
-  createBtn: {
-    flexDirection: "row",
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: "center",
+  headerSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
-  createBtnText: {
+  createButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  createButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",
-    marginLeft: 6,
+    fontSize: 14,
+  },
+  listContent: {
+    paddingBottom: 120,
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+  emptyList: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   collectionCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 14,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 18,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary + "22",
+  collectionIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+  },
+  collectionInfo: {
+    flex: 1,
   },
   collectionName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.textPrimary,
+    marginBottom: 4,
   },
   collectionMeta: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 4,
   },
-  iconBtn: {
-    padding: 8,
-    marginLeft: 4,
+  collectionActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalBackdrop: {
     flex: 1,

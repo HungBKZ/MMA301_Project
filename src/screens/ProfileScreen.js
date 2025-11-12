@@ -127,18 +127,18 @@ const ProfileScreen = ({ route, navigation }) => {
               } else if (user?.email) {
                 navigation.navigate("UpdateProfile", { email: user.email });
               } else {
-                Alert.alert("Không tìm thấy tài khoản để cập nhật!");
+                Alert.alert("Account not found for update!");
               }
             }}
           >
             <Ionicons name="create-outline" size={24} color={colors.textPrimary} />
-            <Text style={styles.actionText}>Cập nhật tài khoản</Text>
+            <Text style={styles.actionText}>Update Account</Text>
             <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionButton} onPress={goChangePassword}>
             <Ionicons name="lock-closed-outline" size={24} color={colors.textPrimary} />
-            <Text style={styles.actionText}>Đổi mật khẩu</Text>
+            <Text style={styles.actionText}>Change Password</Text>
             <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 

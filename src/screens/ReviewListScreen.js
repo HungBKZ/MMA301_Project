@@ -38,10 +38,12 @@ export default function ReviewListScreen({ route, navigation }) {
     const loadReviews = useCallback(() => {
         setLoading(true);
         try {
-            const isAdmin = user && (user.role === 'admin' || user.role === 'Admin');
+            const isAdmin = user && (user.role?.toLowerCase() === 'admin');
+            console.log('ReviewListScreen - User role:', user?.role, 'isAdmin:', isAdmin);
             const data = getReviewsByMovie(movieId, isAdmin);
+            console.log('ReviewListScreen - Loaded reviews:', data.length, 'isAdmin:', isAdmin);
             setReviews(data);
-            const visibleCount = isAdmin ? data.length : data.filter(r => !r.hidden).length;
+            const visibleCount = isAdmin ? data.length : data.filter(r => !r.hidden && r.hidden !== 1).length;
             setReviewCount(visibleCount);
         } catch (error) {
             console.error('Error loading reviews:', error);
@@ -190,8 +192,8 @@ export default function ReviewListScreen({ route, navigation }) {
     const renderItem = ({ item }) => {
         const createdAt = new Date(item.created_at).toLocaleDateString('vi-VN');
         const myReview = user && item.user_id === user.id;
-        const isAdmin = user && (user.role === 'admin' || user.role === 'Admin');
-        const isHidden = item.hidden === 1;
+        const isAdmin = user && (user.role?.toLowerCase() === 'admin');
+        const isHidden = item.hidden === 1 || item.hidden === true;
 
         return (
             <View style={[styles.reviewCard, isHidden && isAdmin && styles.hiddenReviewCard]}>
@@ -243,7 +245,7 @@ export default function ReviewListScreen({ route, navigation }) {
                         )}
                         {isAdmin && (
                             <TouchableOpacity
-                                style={styles.iconButton}
+                                style={[styles.iconButton, isHidden && styles.hideButtonActive]}
                                 onPress={() => handleHideReview(item)}
                                 activeOpacity={0.7}
                             >
@@ -291,9 +293,9 @@ export default function ReviewListScreen({ route, navigation }) {
             <View style={styles.emptyIconContainer}>
                 <Ionicons name="chatbubbles-outline" size={64} color={colors.accent} />
             </View>
-            <Text style={styles.emptyTitle}>Chưa có đánh giá</Text>
+            <Text style={styles.emptyTitle}>No Reviews Yet</Text>
             <Text style={styles.emptyDescription}>
-                Hãy là người đầu tiên chia sẻ cảm nhận về phim này
+                Be the first to share your thoughts about this movie
             </Text>
             {user && (
                 <TouchableOpacity
@@ -307,7 +309,7 @@ export default function ReviewListScreen({ route, navigation }) {
                     }}
                 >
                     <Ionicons name="pencil" size={18} color="#FFFFFF" />
-                    <Text style={styles.emptyButtonText}>Viết đánh giá</Text>
+                    <Text style={styles.emptyButtonText}>Write Review</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -318,7 +320,7 @@ export default function ReviewListScreen({ route, navigation }) {
             <View style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>Đang tải đánh giá...</Text>
+                    <Text style={styles.loadingText}>Loading reviews...</Text>
                 </View>
             </View>
         );
@@ -331,7 +333,7 @@ export default function ReviewListScreen({ route, navigation }) {
                 <View style={styles.headerContent}>
                     <Ionicons name="chatbubbles" size={24} color={colors.primary} />
                     <View>
-                        <Text style={styles.headerSubtitle}>Đánh giá từ khán giả</Text>
+                        <Text style={styles.headerSubtitle}>Audience Reviews</Text>
                         <Text style={styles.headerTitle}>Reviews</Text>
                     </View>
                 </View>
@@ -340,6 +342,22 @@ export default function ReviewListScreen({ route, navigation }) {
                     <Text style={styles.reviewCountText}>{reviewCount}</Text>
                 </View>
             </View>
+
+            {/* Admin Notice */}
+            {user && user.role?.toLowerCase() === 'admin' && (
+                <View style={styles.adminNotice}>
+                    <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+                    <View style={styles.adminNoticeTextContainer}>
+                        <Text style={styles.adminNoticeText}>
+                            Admin Mode: You can hide/show reviews using the 
+                        </Text>
+                        <Ionicons name="eye-off" size={14} color={colors.warning} style={{ marginHorizontal: 4 }} />
+                        <Text style={styles.adminNoticeText}>
+                            button on each review
+                        </Text>
+                    </View>
+                </View>
+            )}
 
             {/* ==================== REVIEWS LIST ==================== */}
             {reviews.length === 0 ? (
@@ -398,7 +416,7 @@ export default function ReviewListScreen({ route, navigation }) {
                         <View style={styles.modalHeader}>
                             <View>
                                 <Text style={styles.modalSubtitle}>
-                                    {editingReviewId ? '✏️ Chỉnh sửa' : '✍️ Viết đánh giá'}
+                                    {editingReviewId ? '✏️ Edit' : '✍️ Write Review'}
                                 </Text>
                                 <Text style={styles.modalTitle}>
                                     {editingReviewId ? 'Edit Review' : 'New Review'}
@@ -424,7 +442,7 @@ export default function ReviewListScreen({ route, navigation }) {
                         >
                             {/* Rating Section */}
                             <View style={styles.ratingSection}>
-                                <Text style={styles.inputLabel}>Xếp hạng</Text>
+                                <Text style={styles.inputLabel}>Rating</Text>
                                 <View style={styles.ratingContainer}>
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <TouchableOpacity
@@ -445,10 +463,10 @@ export default function ReviewListScreen({ route, navigation }) {
 
                             {/* Content Input */}
                             <View style={styles.inputSection}>
-                                <Text style={styles.inputLabel}>Nội dung đánh giá</Text>
+                                <Text style={styles.inputLabel}>Review Content</Text>
                                 <TextInput
                                     style={styles.textInput}
-                                    placeholder="Chia sẻ cảm nhận của bạn về phim..."
+                                    placeholder="Share your thoughts about this movie..."
                                     placeholderTextColor={colors.textSecondary}
                                     multiline
                                     numberOfLines={5}
@@ -458,13 +476,13 @@ export default function ReviewListScreen({ route, navigation }) {
                                     textAlignVertical="top"
                                 />
                                 <Text style={styles.charCount}>
-                                    {reviewContent.length} / 500 ký tự
+                                    {reviewContent.length} / 500 characters
                                 </Text>
                             </View>
 
                             {/* Image Section */}
                             <View style={styles.imageSection}>
-                                <Text style={styles.inputLabel}>Thêm ảnh (Tùy chọn)</Text>
+                                <Text style={styles.inputLabel}>Add Image (Optional)</Text>
                                 <TouchableOpacity
                                     style={styles.imagePickerButton}
                                     onPress={pickImage}
@@ -473,9 +491,9 @@ export default function ReviewListScreen({ route, navigation }) {
                                 >
                                     <Ionicons name="image-outline" size={28} color={colors.primary} />
                                     <View style={styles.imagePickerContent}>
-                                        <Text style={styles.imagePickerTitle}>Chọn ảnh từ thư viện</Text>
+                                        <Text style={styles.imagePickerTitle}>Choose Image from Library</Text>
                                         <Text style={styles.imagePickerSubtitle}>
-                                            Tăng cường đánh giá của bạn với ảnh minh họa
+                                            Enhance your review with an illustration
                                         </Text>
                                     </View>
                                 </TouchableOpacity>
@@ -483,7 +501,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                 {/* Image Preview */}
                                 {selectedImage && (
                                     <View style={styles.imagePreviewSection}>
-                                        <Text style={styles.previewLabel}>Ảnh đã chọn</Text>
+                                        <Text style={styles.previewLabel}>Selected Image</Text>
                                         <View style={styles.imagePreviewContainer}>
                                             <Image
                                                 source={{ uri: selectedImage }}
@@ -504,12 +522,12 @@ export default function ReviewListScreen({ route, navigation }) {
                             <View style={styles.guidelineContainer}>
                                 <Ionicons name="bulb-outline" size={20} color={colors.accent} />
                                 <View style={styles.guidelineContent}>
-                                    <Text style={styles.guidelineTitle}>Mẹo viết đánh giá tốt</Text>
+                                    <Text style={styles.guidelineTitle}>Tips for Writing Good Reviews</Text>
                                     <Text style={styles.guidelineText}>
-                                        • Trung thực với cảm nhận của bạn{'\n'}
-                                        • Nêu rõ điểm mạnh và yếu{'\n'}
-                                        • Tránh spoiler{'\n'}
-                                        • Kiểm tra lỗi chính tả trước khi gửi
+                                        • Be honest with your feelings{'\n'}
+                                        • Clearly state strengths and weaknesses{'\n'}
+                                        • Avoid spoilers{'\n'}
+                                        • Check for spelling errors before submitting
                                     </Text>
                                 </View>
                             </View>
@@ -531,7 +549,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                 disabled={submitting}
                                 activeOpacity={0.85}
                             >
-                                <Text style={styles.cancelButtonText}>Hủy</Text>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -554,7 +572,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                             color="#FFFFFF"
                                         />
                                         <Text style={styles.submitButtonText}>
-                                            {editingReviewId ? 'Cập nhật' : 'Gửi'}
+                                            {editingReviewId ? 'Update' : 'Submit'}
                                         </Text>
                                     </>
                                 )}
@@ -642,6 +660,35 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         fontSize: 12,
         letterSpacing: 0.2,
+    },
+
+    adminNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(107, 155, 209, 0.1)',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginHorizontal: 16,
+        marginTop: 8,
+        marginBottom: 8,
+        borderRadius: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: colors.primary,
+    },
+
+    adminNoticeTextContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+    },
+
+    adminNoticeText: {
+        fontSize: 12,
+        color: colors.textPrimary,
+        fontWeight: '600',
+        lineHeight: 16,
     },
 
     // ==================== LIST CONTENT ====================
@@ -746,6 +793,12 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 8,
         backgroundColor: colors.backgroundAlt,
+    },
+
+    hideButtonActive: {
+        backgroundColor: 'rgba(255, 167, 38, 0.15)',
+        borderWidth: 1,
+        borderColor: colors.warning,
     },
 
     hiddenIndicator: {

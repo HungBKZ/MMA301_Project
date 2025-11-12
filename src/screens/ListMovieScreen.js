@@ -41,8 +41,8 @@ export default function ListMovieScreen({ navigation, route }) {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Đang chiếu</Text>
-                <Text style={styles.subtitle}>{movies.length} phim đang chiếu</Text>
+                <Text style={styles.title}>Now Showing</Text>
+                <Text style={styles.subtitle}>{movies.length} movies showing</Text>
             </View>
 
             <FlatList
