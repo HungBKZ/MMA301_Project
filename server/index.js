@@ -337,8 +337,6 @@ app.get('/booking/view', (req, res) => {
                 ${fields.time ? `<div class="item"><p class="label">Suất chiếu</p><p class="value">${esc(fields.time)}</p></div>` : ''}
                 ${fields.cinema ? `<div class="item"><p class="label">Rạp</p><p class="value">${esc(fields.cinema)}</p></div>` : ''}
                 ${fields.room ? `<div class="item"><p class="label">Phòng</p><p class="value">${esc(fields.room)}</p></div>` : ''}
-                ${fields.count ? `<div class="item"><p class="label">Tổng số vé</p><p class="value">${esc(fields.count)}</p></div>` : ''}
-                ${fields.paid ? `<div class="item"><p class="label">Đã thanh toán</p><p class="value">${esc(fields.paid)}</p></div>` : ''}
             </div>
             <div class="item" style="margin-top:4px">
                 <p class="label">Danh sách ghế</p>

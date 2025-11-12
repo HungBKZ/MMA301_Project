@@ -168,6 +168,15 @@ export const initDatabase = () => {
   }
 };
 
+export const deleteReviewsTable = () => {
+  try {
+    db.execSync("DROP TABLE IF EXISTS reviews");
+    console.log("✅ Reviews table deleted");
+  } catch (error) {
+    console.error("❌ Error deleting reviews table:", error);
+  }
+};
+
 // ============================================
 // DATABASE MIGRATION
 // ============================================
@@ -614,9 +623,10 @@ export const deleteAllMovies = () => {
 
 export const createCollection = (userId, name) => {
   try {
+    const now = new Date().toISOString();
     const result = db.runSync(
-      "INSERT INTO collections (user_id, name) VALUES (?, ?)",
-      [userId, name.trim()]
+      "INSERT INTO collections (user_id, name, created_at) VALUES (?, ?, ?)",
+      [userId, name.trim(), now]
     );
     return { success: true, id: result.lastInsertRowId };
   } catch (error) {

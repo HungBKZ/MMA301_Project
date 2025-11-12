@@ -259,8 +259,12 @@ export default function ShowtimeScreen({ route, navigation }) {
                                         </View>
                                     </View>
 
-                                    {/* Showtimes Grid */}
-                                    <View style={styles.timesGrid}>
+                                    {/* Showtimes Row (horizontal to avoid excessive vertical growth) */}
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.timesRowContent}
+                                    >
                                         {group.showtimes.map((st) => {
                                             const seatStatus = getSeatStatusColor(st.available_seats, st.total_seats);
                                             const isFull = st.available_seats === 0;
@@ -326,7 +330,7 @@ export default function ShowtimeScreen({ route, navigation }) {
                                                 </TouchableOpacity>
                                             );
                                         })}
-                                    </View>
+                                    </ScrollView>
                                 </View>
                             );
                         });
@@ -348,8 +352,8 @@ const styles = StyleSheet.create({
     headerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        marginBottom: 16,
+        paddingVertical: 8,
+        marginBottom: 10,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         gap: 12,
@@ -386,9 +390,9 @@ const styles = StyleSheet.create({
     infoCard: {
         backgroundColor: colors.surface,
         borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        marginBottom: 14,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: colors.border,
     },
@@ -407,7 +411,7 @@ const styles = StyleSheet.create({
 
     // ==================== DAYS ROW ====================
     daysRow: {
-        marginBottom: 14,
+        marginBottom: 8,
     },
 
     daysRowContent: {
@@ -417,14 +421,14 @@ const styles = StyleSheet.create({
 
     dayItem: {
         alignItems: 'center',
-        paddingHorizontal: 8,
+        paddingHorizontal: 6,
     },
 
     dayLabel: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '700',
         color: colors.textSecondary,
-        marginBottom: 6,
+        marginBottom: 4,
         textTransform: 'uppercase',
         letterSpacing: 0.1,
     },
@@ -434,9 +438,9 @@ const styles = StyleSheet.create({
     },
 
     dayBubble: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         backgroundColor: colors.surface,
         justifyContent: 'center',
         alignItems: 'center',
@@ -455,7 +459,7 @@ const styles = StyleSheet.create({
     },
 
     dayNumber: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '800',
         color: colors.textPrimary,
     },
@@ -468,8 +472,7 @@ const styles = StyleSheet.create({
 
     // ==================== LIST ====================
     list: {
-        flex: 1,
-        marginTop: 8,
+        marginTop: 4,
     },
 
     loadingContainer: {
@@ -491,7 +494,9 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 14,
         borderRadius: 12,
-        marginBottom: 14,
+        marginBottom: 10,
+        alignSelf: 'center',
+        width: '96%',
         borderWidth: 1,
         borderColor: colors.border,
         elevation: 3,
@@ -541,18 +546,17 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // ==================== TIMES GRID ====================
-    timesGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    // ==================== TIMES ROW (Horizontal) ====================
+    timesRowContent: {
+        paddingHorizontal: 2,
+        paddingBottom: 4,
         gap: 8,
     },
 
     timeButton: {
-        flex: 1,
-        minWidth: '45%',
+        width: 128,
         backgroundColor: colors.backgroundAlt,
-        paddingVertical: 12,
+        paddingVertical: 10,
         paddingHorizontal: 10,
         borderRadius: 10,
         borderWidth: 1,
@@ -587,15 +591,15 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: colors.textSecondary,
         fontWeight: '600',
-        marginBottom: 8,
+        marginBottom: 6,
     },
 
     seatBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 6,
-        paddingHorizontal: 10,
+        paddingVertical: 5,
+        paddingHorizontal: 8,
         borderRadius: 8,
     },
 
