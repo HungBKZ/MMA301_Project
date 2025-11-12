@@ -127,7 +127,7 @@ const ProfileScreen = ({ route, navigation }) => {
               } else if (user?.email) {
                 navigation.navigate("UpdateProfile", { email: user.email });
               } else {
-                Alert.alert("Không tìm thấy tài khoản để cập nhật!");
+                Alert.alert("Account not found for update!");
               }
             }}
           >

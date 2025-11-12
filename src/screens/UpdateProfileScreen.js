@@ -51,7 +51,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 }
 
                 if (!user) {
-                    Alert.alert("Lỗi", "Không tìm thấy tài khoản để cập nhật.", [
+                    Alert.alert("Error", "Account not found for update.", [
                         { text: "OK", onPress: () => navigation.goBack() },
                     ]);
                     return;
@@ -64,7 +64,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 setDateOfBirth(user.date_of_birth || "");
                 setGender(user.gender || "");
             } catch (e) {
-                Alert.alert("Lỗi", "Không thể tải dữ liệu tài khoản.");
+                Alert.alert("Error", "Unable to load account data.");
             } finally {
                 await ImagePicker.requestMediaLibraryPermissionsAsync();
                 setInitLoading(false);
@@ -107,71 +107,68 @@ export default function UpdateProfileScreen({ navigation, route }) {
         return age >= 13 && d < today;
     };
 
-    const onUpdate = async () => {
+        const onUpdate = async () => {
         setErr(null);
+        if (!name.trim()) {
+            setErr("Please enter your name.");
+            return;
+        }
+        if (phone && !isPhoneValid(phone)) {
+            setErr("Phone number must start with 0 and have 10 digits.");
+            return;
+        }
+        if (dateOfBirth && !isDobValid(dateOfBirth)) {
+            setErr("Invalid date of birth (user must be at least 13 years old).");
+            return;
+        }
+
         setLoading(true);
         try {
-            const resolvedId = userId || authUser?.id;
-            if (!resolvedId) {
-                setErr("Không xác định được tài khoản để cập nhật.");
+            let foundUser = null;
+            if (userId) {
+                foundUser = getUserById(userId);
+            } else if (email) {
+                foundUser = getUserByEmail(email.trim().toLowerCase());
+            }
+
+            if (!foundUser || !foundUser.id) {
+                setErr("Account not found.");
                 setLoading(false);
                 return;
             }
 
-            const existing = getUserById(resolvedId) || {};
-            const finalPhone = phone && phone.trim() ? phone.trim() : (existing.phone || "");
-            const finalDob = dateOfBirth && dateOfBirth.trim() ? dateOfBirth.trim() : (existing.date_of_birth || "");
-            const finalGender = gender && gender !== "" ? gender : (existing.gender || "");
-
-            if (!finalPhone || !finalDob || !finalGender) {
-                setErr("Vui lòng nhập số điện thoại, ngày sinh và giới tính.");
-                setLoading(false);
-                return;
-            }
-
-            if (!isPhoneValid(finalPhone)) {
-                setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
-                setLoading(false);
-                return;
-            }
-            if (!isDobValid(finalDob)) {
-                setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
-                setLoading(false);
-                return;
-            }
-
-            const ok = updateUserProfile(resolvedId, {
+            const updated = updateUserProfile(foundUser.id, {
                 name: name.trim(),
-                avatar_uri: avatarUri || null,
-                phone: finalPhone,
-                date_of_birth: finalDob,
-                gender: finalGender,
+                phone: phone.trim(),
+                date_of_birth: dateOfBirth.trim(),
+                gender: gender.trim(),
+                avatar_uri: avatarUri.trim(),
             });
 
-            if (ok) {
-                try {
-                    const fresh = getUserById(resolvedId);
-                    if (fresh) {
-                        await login({
-                            id: fresh.id,
-                            email: fresh.email,
-                            role: fresh.role,
-                            phone: fresh.phone,
-                            date_of_birth: fresh.date_of_birth,
-                            gender: fresh.gender,
-                            name: fresh.name,
-                        });
-                    }
-                } catch (e) { }
-                Alert.alert("Thành công", "Cập nhật tài khoản thành công!", [
-                    { text: "OK", onPress: () => navigation.goBack() },
+            if (updated) {
+                await login({
+                    id: foundUser.id,
+                    email: foundUser.email,
+                    role: foundUser.role,
+                    name: name.trim(),
+                    phone: phone.trim(),
+                    date_of_birth: dateOfBirth.trim(),
+                    gender: gender.trim(),
+                    avatar_uri: avatarUri.trim(),
+                });
+
+                Alert.alert("Success", "Account updated successfully.", [
+                    {
+                        text: "OK",
+                        onPress: () => navigation.goBack(),
+                    },
                 ]);
             } else {
-                setErr("Cập nhật thất bại.");
+                setErr("Failed to update account. Please try again.");
             }
-        } catch (e) {
-            console.error("UpdateProfile error:", e);
-            setErr("Lỗi khi cập nhật.");
+        } catch (error) {
+            console.error("Update error:", error);
+            setErr("An error occurred. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -181,7 +178,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+                <Text style={styles.loadingText}>Loading data...</Text>
             </View>
         );
     }
@@ -311,7 +308,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                             { color: dateOfBirth ? colors.textPrimary : colors.textSecondary },
                                         ]}
                                     >
-                                        {dateOfBirth || "Chọn ngày"}
+                                        {dateOfBirth || "Select date"}
                                     </Text>
                                 </TouchableOpacity>
                             </View>

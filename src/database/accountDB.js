@@ -163,12 +163,12 @@ export const upsertOAuthUser = (provider, oauthId, email, name = null, avatarUri
 };
 
 export const seedAdminAccount = async () => {
-  const adminEmail = "admin@gmail.com";
+  const adminEmail = "admin1@gmail.com";
   const admin = getUserByEmail(adminEmail);
   if (!admin) {
     const res = await addUser(
       adminEmail,
-      "admin123",
+      "123456a",
       "Super Admin",
       null,
       "admin",
@@ -177,7 +177,7 @@ export const seedAdminAccount = async () => {
       "male"                  // gender
     );
     if (res.success) {
-      console.log("✅ Admin account seeded: admin@gmail.com / admin123");
+      console.log("✅ Admin account seeded: admin@gmail.com / 123456a");
     } else {
       console.error("❌ Error seeding admin:", res.error);
     }

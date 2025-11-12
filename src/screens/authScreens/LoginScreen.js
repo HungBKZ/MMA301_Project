@@ -206,30 +206,6 @@ export default function LoginScreen({ navigation }) {
               </>
             )}
           </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Google Login Button */}
-          <TouchableOpacity
-            style={[styles.googleButton, loading && styles.googleButtonDisabled]}
-            onPress={() => promptAsync()}
-            disabled={loading || !request}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#DB4437" />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
-                <Text style={styles.googleButtonText}>Login with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
 
         {/* ==================== SIGNUP LINK ==================== */}

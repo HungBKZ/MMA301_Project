@@ -86,27 +86,27 @@ export default function RegisterScreen({ navigation }) {
   const onRegister = async () => {
     setErr(null);
     if (!email.trim() || !password || !confirmPassword || !phone || !dateOfBirth || !gender) {
-      setErr("Vui lòng điền đầy đủ các trường bắt buộc (*).");
+      setErr("Please fill in all required fields (*).");
       return;
     }
     if (!isEmailValid(email.trim())) {
-      setErr("Email không đúng định dạng.");
+      setErr("Invalid email format.");
       return;
     }
     if (!isPhoneValid(phone.trim())) {
-      setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
+      setErr("Phone number must have 10 digits and start with 0.");
       return;
     }
     if (!isDobValid(dateOfBirth.trim())) {
-      setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
+      setErr("Invalid date of birth or under 13 years old.");
       return;
     }
     if (!isPasswordValid(password)) {
-      setErr("Mật khẩu phải có ít nhất 6 ký tự, bao gồm chữ và số.");
+      setErr("Password must be at least 6 characters, including letters and numbers.");
       return;
     }
     if (password !== confirmPassword) {
-      setErr("Mật khẩu xác nhận không khớp.");
+      setErr("Password confirmation does not match.");
       return;
     }
 
@@ -114,7 +114,7 @@ export default function RegisterScreen({ navigation }) {
     try {
       const existing = getUserByEmail(email.trim());
       if (existing) {
-        setErr("Email này đã được đăng ký.");
+        setErr("This email is already registered.");
         setLoading(false);
         return;
       }
@@ -129,7 +129,7 @@ export default function RegisterScreen({ navigation }) {
         gender
       );
       if (!r.success) {
-        setErr("Đăng ký thất bại");
+        setErr("Registration failed");
         setLoading(false);
         return;
       }
@@ -147,7 +147,7 @@ export default function RegisterScreen({ navigation }) {
       }
     } catch (e) {
       console.error("Register error:", e);
-      setErr("Lỗi khi đăng ký.");
+      setErr("Error during registration.");
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ export default function RegisterScreen({ navigation }) {
               >
                 <Ionicons name="chevron-back" size={24} color={colors.primary} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Tạo tài khoản</Text>
+              <Text style={styles.headerTitle}>Create Account</Text>
               <View style={{ width: 40 }} />
             </View>
 
@@ -183,8 +183,8 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.titleIconContainer}>
                 <Ionicons name="person-add" size={40} color={colors.accent} />
               </View>
-              <Text style={styles.title}>Tạo tài khoản mới</Text>
-              <Text style={styles.subtitle}>Đăng ký để bắt đầu trải nghiệm</Text>
+              <Text style={styles.title}>Create New Account</Text>
+              <Text style={styles.subtitle}>Register to start your experience</Text>
             </View>
 
             {/* ==================== ERROR MESSAGE ==================== */}
@@ -197,7 +197,7 @@ export default function RegisterScreen({ navigation }) {
 
             {/* ==================== AVATAR SECTION ==================== */}
             <View style={styles.avatarSection}>
-              <Text style={styles.sectionLabel}>Ảnh đại diện</Text>
+              <Text style={styles.sectionLabel}>Profile Picture</Text>
               <TouchableOpacity
                 style={styles.avatarBox}
                 onPress={pickImage}
@@ -217,7 +217,7 @@ export default function RegisterScreen({ navigation }) {
                 ) : (
                   <View style={styles.avatarPlaceholder}>
                     <Ionicons name="camera" size={40} color={colors.accent} />
-                    <Text style={styles.avatarText}>Thêm ảnh đại diện</Text>
+                    <Text style={styles.avatarText}>Add profile picture</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -225,13 +225,13 @@ export default function RegisterScreen({ navigation }) {
 
             {/* ==================== BASIC INFO SECTION ==================== */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionLabel}>Thông tin cơ bản</Text>
+              <Text style={styles.sectionLabel}>Basic Information</Text>
 
               {/* Name */}
               <View style={styles.inputWrapper}>
                 <Ionicons name="person" size={18} color={colors.accent} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Họ tên (tùy chọn)"
+                  placeholder="Full name (optional)"
                   value={name}
                   onChangeText={setName}
                   style={styles.inputField}
@@ -256,13 +256,13 @@ export default function RegisterScreen({ navigation }) {
 
             {/* ==================== CONTACT INFO SECTION ==================== */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionLabel}>Thông tin liên hệ</Text>
+              <Text style={styles.sectionLabel}>Contact Information</Text>
 
               {/* Phone */}
               <View style={styles.inputWrapper}>
                 <Ionicons name="call" size={18} color={colors.accent} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Số điện thoại *"
+                  placeholder="Phone number *"
                   value={phone}
                   onChangeText={setPhone}
                   style={styles.inputField}
@@ -285,7 +285,7 @@ export default function RegisterScreen({ navigation }) {
                       { color: dateOfBirth ? colors.textPrimary : colors.textSecondary },
                     ]}
                   >
-                    {dateOfBirth || "Ngày sinh *"}
+                    {dateOfBirth || "Date of birth *"}
                   </Text>
                 </TouchableOpacity>
 
@@ -296,10 +296,10 @@ export default function RegisterScreen({ navigation }) {
                     onValueChange={(value) => setGender(value)}
                     style={styles.picker}
                   >
-                    <Picker.Item label="Giới tính *" value="" />
-                    <Picker.Item label="Nam" value="male" />
-                    <Picker.Item label="Nữ" value="female" />
-                    <Picker.Item label="Khác" value="other" />
+                    <Picker.Item label="Gender *" value="" />
+                    <Picker.Item label="Male" value="male" />
+                    <Picker.Item label="Female" value="female" />
+                    <Picker.Item label="Other" value="other" />
                   </Picker>
                 </View>
               </View>
@@ -317,13 +317,13 @@ export default function RegisterScreen({ navigation }) {
 
             {/* ==================== SECURITY SECTION ==================== */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionLabel}>Bảo mật</Text>
+              <Text style={styles.sectionLabel}>Security</Text>
 
               {/* Password */}
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed" size={18} color={colors.primary} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Mật khẩu (6+ ký tự, chữ + số) *"
+                  placeholder="Password (6+ characters, letters + numbers) *"
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
@@ -346,7 +346,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.inputWrapper}>
                 <Ionicons name="lock-closed" size={18} color={colors.primary} style={styles.inputIcon} />
                 <TextInput
-                  placeholder="Xác nhận mật khẩu *"
+                  placeholder="Confirm password *"
                   secureTextEntry={!showConfirm}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -374,7 +374,7 @@ export default function RegisterScreen({ navigation }) {
                   size={16}
                   color={password.length >= 6 ? colors.success : colors.textSecondary}
                 />
-                <Text style={styles.requirementText}>Ít nhất 6 ký tự</Text>
+                <Text style={styles.requirementText}>At least 6 characters</Text>
               </View>
               <View style={styles.requirementRow}>
                 <Ionicons
@@ -382,7 +382,7 @@ export default function RegisterScreen({ navigation }) {
                   size={16}
                   color={/[A-Za-z]/.test(password) ? colors.success : colors.textSecondary}
                 />
-                <Text style={styles.requirementText}>Có chữ cái</Text>
+                <Text style={styles.requirementText}>Contains letters</Text>
               </View>
               <View style={styles.requirementRow}>
                 <Ionicons
@@ -390,7 +390,7 @@ export default function RegisterScreen({ navigation }) {
                   size={16}
                   color={/\d/.test(password) ? colors.success : colors.textSecondary}
                 />
-                <Text style={styles.requirementText}>Có số</Text>
+                <Text style={styles.requirementText}>Contains numbers</Text>
               </View>
             </View>
 
@@ -406,7 +406,7 @@ export default function RegisterScreen({ navigation }) {
               ) : (
                 <>
                   <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.registerButtonText}>Tạo tài khoản</Text>
+                  <Text style={styles.registerButtonText}>Create Account</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -417,7 +417,7 @@ export default function RegisterScreen({ navigation }) {
               activeOpacity={0.85}
             >
               <Ionicons name="arrow-back" size={18} color={colors.primary} />
-              <Text style={styles.backButtonText}>Quay lại đăng nhập</Text>
+              <Text style={styles.backButtonText}>Back to Login</Text>
             </TouchableOpacity>
 
             <View style={{ height: 30 }} />
