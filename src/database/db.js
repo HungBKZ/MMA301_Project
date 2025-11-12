@@ -623,9 +623,10 @@ export const deleteAllMovies = () => {
 
 export const createCollection = (userId, name) => {
   try {
+    const now = new Date().toISOString();
     const result = db.runSync(
-      "INSERT INTO collections (user_id, name) VALUES (?, ?)",
-      [userId, name.trim()]
+      "INSERT INTO collections (user_id, name, created_at) VALUES (?, ?, ?)",
+      [userId, name.trim(), now]
     );
     return { success: true, id: result.lastInsertRowId };
   } catch (error) {

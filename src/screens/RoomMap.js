@@ -197,38 +197,34 @@ export default function RoomMap({ route, navigation }) {
         return { totalSeats, totalPrice };
     };
 
-    const validateSelection = (selSet) => {
-        const totals = computeTotals(selSet);
-        if (totals.totalSeats > 6) {
-            return { ok: false, reason: 'Bạn chỉ được đặt tối đa 6 ghế mỗi lần.' };
-        }
-
+    // Kiểm tra quy tắc khi bấm "Thanh toán" tại RoomMap (không chặn lúc chọn):
+    //  - Không để trống đúng 1 ghế giữa 2 ghế bạn vừa chọn (bỏ qua ghế đã đặt trước đó)
+    //  - Không để trống đúng 1 ghế ở đầu hàng so với lựa chọn
+    const validateSelectionForPayment = () => {
         const byRow = seats.reduce((acc, s) => {
             acc[s.row_label] = acc[s.row_label] || [];
             acc[s.row_label].push(s);
             return acc;
         }, {});
+        Object.keys(byRow).forEach(label => byRow[label].sort((a, b) => a.seat_number - b.seat_number));
 
         for (const label of Object.keys(byRow)) {
-            const arr = byRow[label].slice().sort((a, b) => a.seat_number - b.seat_number);
-            const status = arr.map(s => {
-                if (s.is_active === 0) return 'RES';
-                if (reservedSet.has(s.id)) return 'RES';
-                if (selSet.has(s.id)) return 'SEL';
-                return 'FREE';
-            });
-            const n = status.length;
-            const taken = (v) => v === 'RES' || v === 'SEL';
+            const rowSeats = byRow[label];
+            if (!rowSeats.length) continue;
+            const n = rowSeats.length;
+            const isSel = (idx) => selectedSet.has(rowSeats[idx].id);
 
-            if (n >= 2 && status[0] === 'FREE' && taken(status[1])) {
-                return { ok: false, reason: 'Không được chừa trống 1 ghế ở đầu hàng.' };
-            }
-            if (n >= 2 && status[n - 1] === 'FREE' && taken(status[n - 2])) {
-                return { ok: false, reason: 'Không được chừa trống 1 ghế ở cuối hàng.' };
-            }
+            // SEL - FREE - SEL trong lựa chọn mới
             for (let i = 1; i < n - 1; i++) {
-                if (status[i] === 'FREE' && taken(status[i - 1]) && taken(status[i + 1])) {
-                    return { ok: false, reason: 'Không được để trống 1 ghế giữa 2 ghế đã chọn/đã đặt.' };
+                if (!isSel(i) && isSel(i - 1) && isSel(i + 1)) {
+                    return { ok: false, reason: `Không được để trống 1 ghế giữa 2 ghế bạn chọn (hàng ${label}, ghế ${rowSeats[i].seat_number}).` };
+                }
+            }
+
+            // 1 ghế đầu hàng
+            if (n >= 2) {
+                if (!isSel(0) && isSel(1)) {
+                    return { ok: false, reason: `Không được chừa trống 1 ghế ở đầu hàng (hàng ${label}).` };
                 }
             }
         }
@@ -247,11 +243,6 @@ export default function RoomMap({ route, navigation }) {
             return;
         }
 
-        const validation = validateSelection(next);
-        if (!validation.ok) {
-            Alert.alert('Không hợp lệ', validation.reason);
-            return;
-        }
         setSelectedSet(next);
     };
 
@@ -361,11 +352,6 @@ export default function RoomMap({ route, navigation }) {
                                                             Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
                                                             return;
                                                         }
-                                                        const validation = validateSelection(next);
-                                                        if (!validation.ok) {
-                                                            Alert.alert('Không hợp lệ', validation.reason);
-                                                            return;
-                                                        }
                                                         setSelectedSet(next);
                                                     }}
                                                 />
@@ -423,12 +409,16 @@ export default function RoomMap({ route, navigation }) {
                     style={[styles.continueBtn, { opacity: selectedSet.size ? 1 : 0.5 }]}
                     onPress={() => {
                         if (!selectedSet.size) return;
-                        const validation = validateSelection(selectedSet);
+                        const t = computeTotals();
+                        if (t.totalSeats > 6) {
+                            Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
+                            return;
+                        }
+                        const validation = validateSelectionForPayment();
                         if (!validation.ok) {
                             Alert.alert('Không hợp lệ', validation.reason);
                             return;
                         }
-                        const t = computeTotals();
                         navigation.navigate('Checkout', {
                             showtimeId,
                             roomId,

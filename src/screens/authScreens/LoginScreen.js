@@ -122,7 +122,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.logoContainer}>
             <Ionicons name="film" size={48} color={colors.primary} />
           </View>
-          <Text style={styles.appTitle}>Cinema</Text>
+          <Text style={styles.appTitle}>AquaFive Cinema</Text>
           <Text style={styles.appSubtitle}>Buy movie tickets online</Text>
         </View>
 
@@ -226,7 +226,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.featureDesc}>Book movie tickets with just a few taps</Text>
           </View>
 
-          <View style={styles.featureItem}>
+          {/* <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
               <Ionicons name="star" size={24} color={colors.accent} />
             </View>
@@ -240,7 +240,7 @@ export default function LoginScreen({ navigation }) {
             </View>
             <Text style={styles.featureTitle}>Wishlist</Text>
             <Text style={styles.featureDesc}>Save your favorite movies to watch later</Text>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -112,6 +112,10 @@ export default function CheckoutScreen({ route, navigation }) {
                 setInitializingHold(false);
                 return;
             }
+            // Note: We intentionally allow users to select freely in RoomMap and only
+            // validate seat-gap rules at payment time. However, we still create a HOLD
+            // here to prevent concurrent conflicts. If validation fails on pay, we'll
+            // release this hold and show an error.
             try {
                 setError(null);
                 setInitializingHold(true);
@@ -210,6 +214,8 @@ export default function CheckoutScreen({ route, navigation }) {
 
     // Ref used to bypass the beforeRemove confirmation for programmatic payment/navigation
 
+    // Validation of selection is done in RoomMap when pressing "Thanh toán".
+
     const finalizePaid = async (opts = {}) => {
         if (!bookingId) return;
         setLoading(true);
@@ -274,6 +280,7 @@ export default function CheckoutScreen({ route, navigation }) {
 
     const onConfirm = async () => {
         if (!bookingId) return;
+        // RoomMap already validated selection rules before navigating here.
         if (paymentMethod === 'CASH') {
             // Allow programmatic leave (confirming payment) so beforeRemove won't block
             allowLeaveRef.current = true;
