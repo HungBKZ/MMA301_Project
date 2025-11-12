@@ -132,8 +132,8 @@ export default function MapsScreen() {
         <View style={styles.headerContent}>
           <Ionicons name="location" size={28} color={colors.primary} />
           <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={styles.headerSubtitle}>Tìm rạp chiếu phim</Text>
-            <Text style={styles.headerTitle}>Gần bạn</Text>
+            <Text style={styles.headerSubtitle}>Find Cinemas</Text>
+            <Text style={styles.headerTitle}>Near You</Text>
           </View>
         </View>
 
@@ -202,7 +202,7 @@ export default function MapsScreen() {
           ) : (
             <>
               <Ionicons name="search" size={20} color="#FFFFFF" />
-              <Text style={styles.searchButtonText}>Tìm rạp gần đây</Text>
+              <Text style={styles.searchButtonText}>Find Cinemas Near You</Text>
             </>
           )}
         </TouchableOpacity>
@@ -225,8 +225,8 @@ export default function MapsScreen() {
               <View style={styles.resultsHeader}>
                 <Ionicons name="pin" size={24} color={colors.primary} />
                 <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={styles.resultTitle}>Tìm thấy {cinemas.length} rạp</Text>
-                  <Text style={styles.resultSubtitle}>Trong vòng 15km từ vị trí của bạn</Text>
+                  <Text style={styles.resultTitle}>Find {cinemas.length} Cinemas</Text>
+                  <Text style={styles.resultSubtitle}>Within 15km of your location</Text>
                 </View>
               </View>
 
@@ -292,7 +292,7 @@ export default function MapsScreen() {
                     {cinema.totalScreens && (
                       <View style={styles.detailRow}>
                         <Ionicons name="film" size={16} color={colors.primary} />
-                        <Text style={styles.detailText}>{cinema.totalScreens} phòng chiếu</Text>
+                        <Text style={styles.detailText}>{cinema.totalScreens} rooms</Text>
                       </View>
                     )}
 
@@ -320,7 +320,7 @@ export default function MapsScreen() {
 
                   {/* Tap Hint */}
                   <Text style={styles.tapHint}>
-                    Tap để xem chỉ đường trên Google Maps
+                    Tap to see directions on Google Maps
                   </Text>
                 </TouchableOpacity>
               ))}

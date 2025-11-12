@@ -28,6 +28,7 @@ export default function ReviewListScreen({ route, navigation }) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [reviewCount, setReviewCount] = useState(0);
+    const [averageRating, setAverageRating] = useState(0);
     const [modalVisible, setModalVisible] = useState(false);
     const [reviewContent, setReviewContent] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -41,8 +42,17 @@ export default function ReviewListScreen({ route, navigation }) {
             const isAdmin = user && (user.role === 'admin' || user.role === 'Admin');
             const data = getReviewsByMovie(movieId, isAdmin);
             setReviews(data);
-            const visibleCount = isAdmin ? data.length : data.filter(r => !r.hidden).length;
+            const visibleReviews = isAdmin ? data : data.filter(r => !r.hidden);
+            const visibleCount = visibleReviews.length;
             setReviewCount(visibleCount);
+            // compute average rating for visible reviews
+            if (visibleCount > 0) {
+                const sum = visibleReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+                const avg = Number((sum / visibleCount).toFixed(1));
+                setAverageRating(avg);
+            } else {
+                setAverageRating(0);
+            }
         } catch (error) {
             console.error('Error loading reviews:', error);
         } finally {
@@ -60,12 +70,14 @@ export default function ReviewListScreen({ route, navigation }) {
         try {
             let result;
             if (editingReviewId) {
-                result = updateReview(editingReviewId, reviewContent.trim(), selectedImage);
+                // update with rating, content, optional image
+                result = updateReview(editingReviewId, rating, reviewContent.trim(), selectedImage);
                 if (result.success) {
                     Alert.alert('Success', 'Review updated successfully');
                 }
             } else {
-                result = addReview(movieId, user.id, reviewContent.trim(), selectedImage);
+                // create new review with rating
+                result = addReview(movieId, user.id, rating, reviewContent.trim(), selectedImage);
                 if (result.success) {
                     Alert.alert('Success', 'Review submitted successfully');
                 }
@@ -114,6 +126,7 @@ export default function ReviewListScreen({ route, navigation }) {
             if (user && review.user_id === user.id) {
                 setReviewContent(review.content);
                 setSelectedImage(review.image || null);
+                setRating(review.rating || 5);
                 setEditingReviewId(review.id);
                 setModalVisible(true);
             }
@@ -195,7 +208,6 @@ export default function ReviewListScreen({ route, navigation }) {
 
         return (
             <View style={[styles.reviewCard, isHidden && isAdmin && styles.hiddenReviewCard]}>
-                {/* Review Header */}
                 <View style={styles.reviewHeader}>
                     <View style={styles.userSection}>
                         {item.avatar_uri ? (
@@ -242,22 +254,23 @@ export default function ReviewListScreen({ route, navigation }) {
                             </>
                         )}
                         {isAdmin && (
-                            <TouchableOpacity
-                                style={styles.iconButton}
-                                onPress={() => handleHideReview(item)}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons
-                                    name={isHidden ? "eye" : "eye-off"}
-                                    size={18}
-                                    color={isHidden ? colors.success : colors.warning}
-                                />
-                            </TouchableOpacity>
+                            <>
+                                <TouchableOpacity
+                                    style={styles.iconButton}
+                                    onPress={() => handleHideReview(item)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons
+                                        name={isHidden ? "eye" : "eye-off"}
+                                        size={18}
+                                        color={isHidden ? colors.success : colors.warning}
+                                    />
+                                </TouchableOpacity>
+                            </>
                         )}
                     </View>
                 </View>
 
-                {/* Hidden Badge */}
                 {isHidden && isAdmin && (
                     <View style={styles.hiddenIndicator}>
                         <Ionicons name="eye-off" size={12} color={colors.warning} />
@@ -265,7 +278,13 @@ export default function ReviewListScreen({ route, navigation }) {
                     </View>
                 )}
 
-                {/* Review Content */}
+                <View style={styles.reviewRatingRow}>
+                    {[1, 2, 3, 4, 5].map(s => (
+                        <Ionicons key={s} name={s <= (item.rating || 5) ? 'star' : 'star-outline'} size={16} color={colors.accent} style={{ marginRight: 4 }} />
+                    ))}
+                    <Text style={styles.ratingNumber}>{item.rating || 5}/5</Text>
+                </View>
+
                 <Text style={[styles.reviewContent, isHidden && isAdmin && styles.hiddenReviewContent]}>
                     {item.content}
                 </Text>
@@ -326,13 +345,20 @@ export default function ReviewListScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* ==================== HEADER ==================== */}
             <View style={styles.headerBar}>
                 <View style={styles.headerContent}>
                     <Ionicons name="chatbubbles" size={24} color={colors.primary} />
                     <View>
                         <Text style={styles.headerSubtitle}>Đánh giá từ khán giả</Text>
-                        <Text style={styles.headerTitle}>Reviews</Text>
+                        <View style={styles.headerTitleRow}>
+                            <Text style={styles.headerTitle}>Reviews</Text>
+                            {averageRating > 0 && (
+                                <View style={styles.avgBadge}>
+                                    <Ionicons name="star" size={14} color={colors.accent} />
+                                    <Text style={styles.avgText}>{averageRating}/5</Text>
+                                </View>
+                            )}
+                        </View>
                     </View>
                 </View>
                 <View style={styles.reviewCountBadge}>
@@ -379,7 +405,6 @@ export default function ReviewListScreen({ route, navigation }) {
                 </TouchableOpacity>
             )}
 
-            {/* ==================== ADD/EDIT REVIEW MODAL ==================== */}
             <Modal
                 visible={modalVisible}
                 transparent={true}
@@ -620,6 +645,31 @@ const styles = StyleSheet.create({
         letterSpacing: 0.3,
     },
 
+    headerTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+
+    avgBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        marginLeft: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    avgText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginLeft: 6,
+        fontWeight: '700',
+    },
+
     reviewCountBadge: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -796,6 +846,18 @@ const styles = StyleSheet.create({
         height: 180,
         resizeMode: 'cover',
         backgroundColor: colors.backgroundAlt,
+    },
+
+    reviewRatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    ratingNumber: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        marginLeft: 8,
+        fontWeight: '700',
     },
 
     // ==================== EMPTY STATE ====================

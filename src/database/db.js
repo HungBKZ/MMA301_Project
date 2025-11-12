@@ -110,6 +110,7 @@ export const initDatabase = () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         movie_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
+        rate INTEGER NOT NULL DEFAULT 5,
         content TEXT NOT NULL,
         image TEXT,
         created_at DATETIME DEFAULT (datetime('now')),
@@ -261,17 +262,20 @@ const migrateDatabase = () => {
         movie_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
+        rating INTEGER NOT NULL DEFAULT 5,
         status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
         hidden INTEGER NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT (datetime('now'))
       )`);
       const rvInfo = db.getAllSync("PRAGMA table_info(reviews)");
-      const cols = ["movie_id", "user_id", "content", "status", "hidden", "created_at"];
+      const cols = ["movie_id", "user_id", "content", "rating", "status", "hidden", "created_at"];
       cols.forEach((c) => {
         const exists = rvInfo.some(col => col.name === c);
         if (!exists) {
           console.log(`🔄 Migrating: Adding reviews.${c}`);
-          if (c === "status") {
+          if (c === "rating") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN rating INTEGER NOT NULL DEFAULT 5");
+          } else if (c === "status") {
             db.execSync("ALTER TABLE reviews ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
           } else if (c === "hidden") {
             db.execSync("ALTER TABLE reviews ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0");
@@ -702,11 +706,11 @@ export const getCollectionMovies = (collectionId) => {
 // REVIEWS – UC-29 Moderation
 // ============================================
 
-export const addReview = (movieId, userId, content, image) => {
+export const addReview = (movieId, userId, rating, content, image) => {
   try {
     const result = db.runSync(
-      "INSERT INTO reviews (movie_id, user_id, content, image) VALUES (?, ?, ?, ?)",
-      [movieId, userId, content.trim(), image]
+      "INSERT INTO reviews (movie_id, user_id, rating, content, image) VALUES (?, ?, ?, ?, ?)",
+      [movieId, userId, rating, content.trim(), image]
     );
     return { success: true, id: result.lastInsertRowId };
   } catch (error) {
@@ -722,7 +726,6 @@ export const getReviewsByMovie = (movieId, includeHidden = false) => {
         LEFT JOIN account a ON r.user_id = a.id 
         WHERE r.movie_id = ?`;
 
-    // Nếu không phải admin, chỉ lấy review chưa bị ẩn
     if (!includeHidden) {
       query += ` AND (r.hidden = 0 OR r.hidden IS NULL)`;
     }
@@ -761,11 +764,11 @@ export const deleteReview = (reviewId) => {
   }
 };
 
-export const updateReview = (reviewId, content) => {
+export const updateReview = (reviewId, rating, content, image = null) => {
   try {
     db.runSync(
-      "UPDATE reviews SET content = ?, image = COALESCE(?, image) WHERE id = ?",
-      [content.trim(), image, reviewId]
+      "UPDATE reviews SET rating = ?, content = ?, image = COALESCE(?, image) WHERE id = ?",
+      [rating, content.trim(), image, reviewId]
     );
     return { success: true };
   } catch (error) {

@@ -123,7 +123,7 @@ export default function LoginScreen({ navigation }) {
             <Ionicons name="film" size={48} color={colors.primary} />
           </View>
           <Text style={styles.appTitle}>Cinema</Text>
-          <Text style={styles.appSubtitle}>Mua vé xem phim online</Text>
+          <Text style={styles.appSubtitle}>Buy movie tickets online</Text>
         </View>
 
         {/* ==================== ERROR MESSAGE ==================== */}
@@ -136,8 +136,8 @@ export default function LoginScreen({ navigation }) {
 
         {/* ==================== LOGIN FORM ==================== */}
         <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>Đăng nhập</Text>
-          <Text style={styles.formSubtitle}>Vui lòng nhập thông tin của bạn</Text>
+          <Text style={styles.formTitle}>Login</Text>
+          <Text style={styles.formSubtitle}>Please enter your information</Text>
 
           {/* Email Input */}
           <View style={styles.inputGroup}>
@@ -159,11 +159,11 @@ export default function LoginScreen({ navigation }) {
 
           {/* Password Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Mật khẩu</Text>
+            <Text style={styles.inputLabel}>Password</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="lock-closed" size={20} color={colors.accent} style={styles.inputIcon} />
               <TextInput
-                placeholder="Nhập mật khẩu"
+                placeholder="Enter your password"
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
@@ -187,7 +187,7 @@ export default function LoginScreen({ navigation }) {
 
           {/* Forgot Password */}
           <TouchableOpacity style={styles.forgotButton}>
-            <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           {/* Login Button */}
@@ -202,7 +202,7 @@ export default function LoginScreen({ navigation }) {
             ) : (
               <>
                 <Ionicons name="log-in" size={20} color="#FFFFFF" />
-                <Text style={styles.loginButtonText}>Đăng nhập</Text>
+                <Text style={styles.loginButtonText}>Login</Text>
               </>
             )}
           </TouchableOpacity>
@@ -210,7 +210,7 @@ export default function LoginScreen({ navigation }) {
           {/* Divider */}
           <View style={styles.dividerContainer}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>hoặc</Text>
+            <Text style={styles.dividerText}>or</Text>
             <View style={styles.divider} />
           </View>
 
@@ -226,7 +226,7 @@ export default function LoginScreen({ navigation }) {
             ) : (
               <>
                 <Ionicons name="logo-google" size={20} color="#DB4437" />
-                <Text style={styles.googleButtonText}>Đăng nhập bằng Google</Text>
+                <Text style={styles.googleButtonText}>Login with Google</Text>
               </>
             )}
           </TouchableOpacity>
@@ -234,9 +234,9 @@ export default function LoginScreen({ navigation }) {
 
         {/* ==================== SIGNUP LINK ==================== */}
         <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>Chưa có tài khoản? </Text>
+          <Text style={styles.signupText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={styles.signupLink}>Tạo tài khoản mới</Text>
+            <Text style={styles.signupLink}>Create a new account</Text>
           </TouchableOpacity>
         </View>
 
@@ -246,16 +246,16 @@ export default function LoginScreen({ navigation }) {
             <View style={styles.featureIcon}>
               <Ionicons name="ticket" size={24} color={colors.accent} />
             </View>
-            <Text style={styles.featureTitle}>Mua vé dễ dàng</Text>
-            <Text style={styles.featureDesc}>Đặt vé xem phim chỉ với vài taps</Text>
+            <Text style={styles.featureTitle}>Buy tickets easily</Text>
+            <Text style={styles.featureDesc}>Book movie tickets with just a few taps</Text>
           </View>
 
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>
               <Ionicons name="star" size={24} color={colors.accent} />
             </View>
-            <Text style={styles.featureTitle}>Đánh giá phim</Text>
-            <Text style={styles.featureDesc}>Chia sẻ cảm nhận về phim yêu thích</Text>
+            <Text style={styles.featureTitle}>Rate Movies</Text>
+            <Text style={styles.featureDesc}>Share your thoughts on your favorite films</Text>
           </View>
 
           <View style={styles.featureItem}>
@@ -263,7 +263,7 @@ export default function LoginScreen({ navigation }) {
               <Ionicons name="heart" size={24} color={colors.accent} />
             </View>
             <Text style={styles.featureTitle}>Wishlist</Text>
-            <Text style={styles.featureDesc}>Lưu phim yêu thích để xem sau</Text>
+            <Text style={styles.featureDesc}>Save your favorite movies to watch later</Text>
           </View>
         </View>
       </ScrollView>

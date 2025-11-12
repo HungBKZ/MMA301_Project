@@ -79,7 +79,7 @@ export default function UserHomeScreen({ navigation }) {
           onPress={() => navigation.navigate('MovieDetail', { movieId: item.id })}
         >
           <Ionicons name="ticket-sharp" size={20} color="#FFFFFF" />
-          <Text style={styles.bookButtonText}>Chi tiết</Text>
+          <Text style={styles.bookButtonText}>Details</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -137,7 +137,7 @@ export default function UserHomeScreen({ navigation }) {
         {item.status === 'SHOWING' && (
           <TouchableOpacity style={styles.bookNowButtonFeatured} onPress={() => navigation.navigate('Showtime', { movieId: item.id })}>
             <Ionicons name="ticket-sharp" size={16} color="#FFFFFF" />
-            <Text style={styles.bookNowButtonText}>Mua vé ngay</Text>
+            <Text style={styles.bookNowButtonText}>Buy Tickets Now</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -154,7 +154,7 @@ export default function UserHomeScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.headerTitle}>🎬 Mua vé xem phim</Text>
+            <Text style={styles.headerTitle}>🎬 Buy Movie Tickets</Text>
           </View>
 
         </View>
@@ -165,7 +165,7 @@ export default function UserHomeScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="sparkles" size={20} color={colors.accent} />
-            <Text style={styles.sectionTitle}>Phim nổi bật</Text>
+            <Text style={styles.sectionTitle}>Featured Movies</Text>
           </View>
           <FlatList
             data={featuredMovies}
@@ -187,13 +187,13 @@ export default function UserHomeScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
               <Ionicons name="play-circle" size={20} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Đang chiếu</Text>
+              <Text style={styles.sectionTitle}>Now Showing</Text>
             </View>
             <TouchableOpacity
               onPress={() => navigation.navigate('ListMovies', { status: 'SHOWING' })}
               style={styles.seeAllButton}
             >
-              <Text style={styles.seeAllText}>Xem tất cả</Text>
+              <Text style={styles.seeAllText}>See All</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -209,12 +209,11 @@ export default function UserHomeScreen({ navigation }) {
         </View>
       )}
 
-      {/* ==================== COMING SOON SECTION ==================== */}
       {movies.filter(m => m.status === 'COMING_SOON').length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionTitleContainer}>
             <Ionicons name="time" size={20} color={colors.warning} />
-            <Text style={styles.sectionTitle}>Sắp ra mắt</Text>
+            <Text style={styles.sectionTitle}>Coming Soon</Text>
           </View>
           <FlatList
             data={movies.filter(m => m.status === 'COMING_SOON').slice(0, 8)}
@@ -228,13 +227,12 @@ export default function UserHomeScreen({ navigation }) {
         </View>
       )}
 
-      {/* ==================== PROMOTIONS BANNER ==================== */}
       <View style={styles.promotionBanner}>
         <View style={styles.promotionContent}>
           <Ionicons name="gift" size={40} color={colors.accent} />
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <Text style={styles.promotionTitle}>Ưu đãi độc quyền</Text>
-            <Text style={styles.promotionSubtitle}>Giảm 30% vé xem phim hôm nay</Text>
+            <Text style={styles.promotionTitle}>Exclusive Offer</Text>
+            <Text style={styles.promotionSubtitle}>30% off movie tickets today</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.accent} />
         </View>
