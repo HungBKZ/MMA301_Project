@@ -104,7 +104,6 @@ export const initDatabase = () => {
         FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE
       );
     `);
-
     // 7. Bảng reviews (đánh giá phim)
     db.execSync(`
       CREATE TABLE IF NOT EXISTS reviews (
@@ -112,6 +111,7 @@ export const initDatabase = () => {
         movie_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
+        image TEXT,
         created_at DATETIME DEFAULT (datetime('now')),
         FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES account(id) ON DELETE CASCADE
@@ -702,11 +702,11 @@ export const getCollectionMovies = (collectionId) => {
 // REVIEWS – UC-29 Moderation
 // ============================================
 
-export const addReview = (movieId, userId, content) => {
+export const addReview = (movieId, userId, content, image) => {
   try {
     const result = db.runSync(
-      "INSERT INTO reviews (movie_id, user_id, content) VALUES (?, ?, ?)",
-      [movieId, userId, content.trim()]
+      "INSERT INTO reviews (movie_id, user_id, content, image) VALUES (?, ?, ?, ?)",
+      [movieId, userId, content.trim(), image]
     );
     return { success: true, id: result.lastInsertRowId };
   } catch (error) {
@@ -721,14 +721,14 @@ export const getReviewsByMovie = (movieId, includeHidden = false) => {
         FROM reviews r 
         LEFT JOIN account a ON r.user_id = a.id 
         WHERE r.movie_id = ?`;
-    
+
     // Nếu không phải admin, chỉ lấy review chưa bị ẩn
     if (!includeHidden) {
       query += ` AND (r.hidden = 0 OR r.hidden IS NULL)`;
     }
-    
+
     query += ` ORDER BY r.created_at DESC`;
-    
+
     return db.getAllSync(query, [movieId]);
   } catch (error) {
     console.error("❌ Error getReviewsByMovie:", error);
@@ -764,8 +764,8 @@ export const deleteReview = (reviewId) => {
 export const updateReview = (reviewId, content) => {
   try {
     db.runSync(
-      "UPDATE reviews SET content = ? WHERE id = ?",
-      [content.trim(), reviewId]
+      "UPDATE reviews SET content = ?, image = COALESCE(?, image) WHERE id = ?",
+      [content.trim(), image, reviewId]
     );
     return { success: true };
   } catch (error) {

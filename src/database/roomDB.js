@@ -110,7 +110,7 @@ export const seedRooms = (rooms = []) => {
 		db.execSync("COMMIT;");
 		return true;
 	} catch (error) {
-		try { db.execSync("ROLLBACK;"); } catch (e) {}
+		try { db.execSync("ROLLBACK;"); } catch (e) { }
 		console.error("❌ Error seedRooms:", error);
 		return false;
 	}

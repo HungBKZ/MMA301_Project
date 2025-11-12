@@ -10,8 +10,10 @@ import {
     Platform,
     Image,
     Alert,
+    SafeAreaView,
+    KeyboardAvoidingView,
 } from "react-native";
-import { colors } from "../styles/commonStyles";
+import { colors, commonStyles } from "../styles/commonStyles";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -22,7 +24,7 @@ import { useAuth } from "../auth/AuthContext";
 export default function UpdateProfileScreen({ navigation, route }) {
     const { userId, email } = route?.params || {};
     const { user: authUser, login } = useAuth();
-    const [initLoading, setInitLoading] = useState(true); // loading while fetching user
+    const [initLoading, setInitLoading] = useState(true);
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState(null);
 
@@ -38,7 +40,6 @@ export default function UpdateProfileScreen({ navigation, route }) {
     useEffect(() => {
         (async () => {
             try {
-                // Resolve userId/email: prefer route params, fallback to AuthContext
                 const resolvedId = userId || authUser?.id;
                 const resolvedEmail = email || authUser?.email;
 
@@ -50,7 +51,9 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 }
 
                 if (!user) {
-                    Alert.alert("Lỗi", "Không tìm thấy tài khoản để cập nhật.", [{ text: "OK", onPress: () => navigation.goBack() }]);
+                    Alert.alert("Lỗi", "Không tìm thấy tài khoản để cập nhật.", [
+                        { text: "OK", onPress: () => navigation.goBack() },
+                    ]);
                     return;
                 }
 
@@ -77,7 +80,9 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 allowsEditing: true,
                 aspect: [1, 1],
             });
-            if (!res.canceled && res.assets && res.assets[0]?.uri) setAvatarUri(res.assets[0].uri);
+            if (!res.canceled && res.assets && res.assets[0]?.uri) {
+                setAvatarUri(res.assets[0].uri);
+            }
         } catch (e) { }
     };
 
@@ -102,7 +107,6 @@ export default function UpdateProfileScreen({ navigation, route }) {
         return age >= 13 && d < today;
     };
 
-    // ...existing code...
     const onUpdate = async () => {
         setErr(null);
         setLoading(true);
@@ -114,20 +118,17 @@ export default function UpdateProfileScreen({ navigation, route }) {
                 return;
             }
 
-            // Lấy dữ liệu hiện tại từ DB (fallback nếu form trống)
             const existing = getUserById(resolvedId) || {};
             const finalPhone = phone && phone.trim() ? phone.trim() : (existing.phone || "");
             const finalDob = dateOfBirth && dateOfBirth.trim() ? dateOfBirth.trim() : (existing.date_of_birth || "");
             const finalGender = gender && gender !== "" ? gender : (existing.gender || "");
 
-            // Nếu sau fallback vẫn thiếu -> bắt nhập
             if (!finalPhone || !finalDob || !finalGender) {
                 setErr("Vui lòng nhập số điện thoại, ngày sinh và giới tính.");
                 setLoading(false);
                 return;
             }
 
-            // Validate final values
             if (!isPhoneValid(finalPhone)) {
                 setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
                 setLoading(false);
@@ -148,7 +149,6 @@ export default function UpdateProfileScreen({ navigation, route }) {
             });
 
             if (ok) {
-                // refresh auth context with updated profile fields
                 try {
                     const fresh = getUserById(resolvedId);
                     if (fresh) {
@@ -159,11 +159,10 @@ export default function UpdateProfileScreen({ navigation, route }) {
                             phone: fresh.phone,
                             date_of_birth: fresh.date_of_birth,
                             gender: fresh.gender,
+                            name: fresh.name,
                         });
                     }
-                } catch (e) {
-                    // non-fatal
-                }
+                } catch (e) { }
                 Alert.alert("Thành công", "Cập nhật tài khoản thành công!", [
                     { text: "OK", onPress: () => navigation.goBack() },
                 ]);
@@ -180,140 +179,571 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
     if (initLoading) {
         return (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
+            <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
             </View>
         );
     }
 
     return (
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Cập nhật tài khoản</Text>
-            {err ? <Text style={styles.error}>{err}</Text> : null}
-            <View style={styles.rowTop}>
-                <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
-                    {avatarUri ? (
-                        <>
-                            <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-                            <TouchableOpacity style={styles.clearAvatar} onPress={clearAvatar}>
-                                <Ionicons name="close-circle" size={18} color="#fff" />
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <View style={styles.avatarPlaceholder}>
-                            <Ionicons name="camera" size={22} color={colors.textSecondary} />
-                            <Text style={styles.avatarText}>Avatar</Text>
+        <SafeAreaView style={styles.safeArea}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardView}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.container}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* ==================== HEADER ==================== */}
+                    <View style={styles.headerContainer}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => navigation.goBack()}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Cập nhật hồ sơ</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    {/* ==================== ERROR MESSAGE ==================== */}
+                    {err && (
+                        <View style={styles.errorContainer}>
+                            <Ionicons name="alert-circle" size={20} color={colors.error} />
+                            <Text style={styles.errorText}>{err}</Text>
                         </View>
                     )}
-                </TouchableOpacity>
 
-                <View style={{ flex: 1, marginLeft: 16 }}>
-                    <TextInput
-                        placeholder="Họ tên"
-                        value={name}
-                        onChangeText={setName}
-                        style={styles.inputSmall}
-                    />
-                    <TextInput
-                        placeholder="Email"
-                        value={userEmail}
-                        editable={false}
-                        style={[styles.inputSmall, { backgroundColor: "#eee", color: "#888" }]}
-                    />
-                </View>
-            </View>
+                    {/* ==================== AVATAR & NAME SECTION ==================== */}
+                    <View style={styles.profileHeaderCard}>
+                        <View style={styles.avatarRow}>
+                            <TouchableOpacity
+                                style={styles.avatarBox}
+                                onPress={pickImage}
+                                activeOpacity={0.8}
+                            >
+                                {avatarUri ? (
+                                    <>
+                                        <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                                        <TouchableOpacity
+                                            style={styles.clearAvatarButton}
+                                            onPress={clearAvatar}
+                                            hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                        >
+                                            <Ionicons name="close-circle" size={24} color={colors.error} />
+                                        </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <View style={styles.avatarPlaceholder}>
+                                        <Ionicons name="camera" size={32} color={colors.accent} />
+                                        <Text style={styles.avatarText}>Đổi ảnh</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
 
-            <View style={styles.row}>
-                <TextInput
-                    placeholder="Số điện thoại *"
-                    value={phone}
-                    onChangeText={setPhone}
-                    style={[styles.input, styles.half, { marginRight: 12 }]}
-                    keyboardType="phone-pad"
-                />
-                <TouchableOpacity
-                    style={[styles.input, styles.half, styles.dateBtn]}
-                    onPress={() => setShowDatePicker(true)}
-                >
-                    <Text style={{ color: dateOfBirth ? "#000" : colors.textSecondary }}>
-                        {dateOfBirth || "Ngày sinh *"}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                            <View style={styles.profileInfoColumn}>
+                                <View style={styles.inputGroupSmall}>
+                                    <Text style={styles.inputLabel}>Họ tên</Text>
+                                    <View style={styles.inputWrapperSmall}>
+                                        <Ionicons name="person" size={18} color={colors.accent} style={styles.inputIcon} />
+                                        <TextInput
+                                            placeholder="Nhập họ tên"
+                                            value={name}
+                                            onChangeText={setName}
+                                            style={styles.inputFieldSmall}
+                                            placeholderTextColor={colors.textSecondary}
+                                        />
+                                    </View>
+                                </View>
 
-            {showDatePicker && (
-                <DateTimePicker
-                    value={dateOfBirth ? new Date(dateOfBirth) : new Date(new Date().getFullYear() - 20, 0, 1)}
-                    mode="date"
-                    display="default"
-                    maximumDate={new Date()}
-                    onChange={onChangeDate}
-                />
-            )}
+                                <View style={styles.inputGroupSmall}>
+                                    <Text style={styles.inputLabel}>Email</Text>
+                                    <View style={[styles.inputWrapperSmall, styles.inputWrapperDisabled]}>
+                                        <Ionicons name="mail" size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                                        <TextInput
+                                            placeholder="Email"
+                                            value={userEmail}
+                                            editable={false}
+                                            style={[styles.inputFieldSmall, { color: colors.textSecondary }]}
+                                            placeholderTextColor={colors.textSecondary}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
 
-            <View style={styles.genderRow}>
-                <Text style={styles.genderLabel}>Giới tính</Text>
-                <View style={styles.pickerWrap}>
-                    <Picker
-                        selectedValue={gender}
-                        onValueChange={(value) => setGender(value)}
-                        mode="dropdown"
-                        style={styles.picker}
+                    {/* ==================== CONTACT INFO SECTION ==================== */}
+                    <View style={styles.formSection}>
+                        <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
+
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.inputLabel}>Số điện thoại *</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Ionicons name="call" size={18} color={colors.accent} style={styles.inputIcon} />
+                                    <TextInput
+                                        placeholder="0xxxxxxxxx"
+                                        value={phone}
+                                        onChangeText={setPhone}
+                                        style={styles.inputField}
+                                        keyboardType="phone-pad"
+                                        placeholderTextColor={colors.textSecondary}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={[styles.inputGroup, styles.halfWidth]}>
+                                <Text style={styles.inputLabel}>Ngày sinh *</Text>
+                                <TouchableOpacity
+                                    style={styles.inputWrapper}
+                                    onPress={() => setShowDatePicker(true)}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons name="calendar" size={18} color={colors.accent} style={styles.inputIcon} />
+                                    <Text
+                                        style={[
+                                            styles.inputField,
+                                            { color: dateOfBirth ? colors.textPrimary : colors.textSecondary },
+                                        ]}
+                                    >
+                                        {dateOfBirth || "Chọn ngày"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={dateOfBirth ? new Date(dateOfBirth) : new Date(new Date().getFullYear() - 20, 0, 1)}
+                                mode="date"
+                                display="default"
+                                maximumDate={new Date()}
+                                onChange={onChangeDate}
+                            />
+                        )}
+
+                        {/* Gender */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Giới tính *</Text>
+                            <View style={styles.pickerWrapper}>
+                                <Ionicons name="people" size={18} color={colors.accent} style={styles.inputIcon} />
+                                <Picker
+                                    selectedValue={gender}
+                                    onValueChange={(value) => setGender(value)}
+                                    mode="dropdown"
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Chọn giới tính..." value="" />
+                                    <Picker.Item label="Nam" value="male" />
+                                    <Picker.Item label="Nữ" value="female" />
+                                    <Picker.Item label="Khác" value="other" />
+                                </Picker>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* ==================== INFO CARD ==================== */}
+                    <View style={styles.infoCard}>
+                        <View style={styles.infoRow}>
+                            <Ionicons name="shield-checkmark" size={18} color={colors.accent} />
+                            <Text style={styles.infoText}>
+                                Các trường có dấu <Text style={{ color: colors.primary }}>*</Text> là bắt buộc
+                            </Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Ionicons name="information-circle" size={18} color={colors.accent} />
+                            <Text style={styles.infoText}>
+                                Email không thể thay đổi vì lý do bảo mật
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* ==================== ACTION BUTTONS ==================== */}
+                    <TouchableOpacity
+                        style={[styles.updateButton, loading && styles.buttonDisabled]}
+                        onPress={onUpdate}
+                        disabled={loading}
+                        activeOpacity={0.85}
                     >
-                        <Picker.Item label="Chọn giới tính..." value="" />
-                        <Picker.Item label="Nam" value="male" />
-                        <Picker.Item label="Nữ" value="female" />
-                        <Picker.Item label="Khác" value="other" />
-                    </Picker>
-                </View>
-            </View>
+                        {loading ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                        ) : (
+                            <>
+                                <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
+                                <Text style={styles.updateButtonText}>Cập nhật hồ sơ</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
 
-            <TouchableOpacity
-                style={[styles.btn, loading && styles.btnDisabled]}
-                onPress={onUpdate}
-                disabled={loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.btnText}>Cập nhật</Text>
-                )}
-            </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => navigation.goBack()}
+                        activeOpacity={0.85}
+                    >
+                        <Ionicons name="arrow-back" size={18} color={colors.primary} />
+                        <Text style={styles.cancelButtonText}>Quay lại</Text>
+                    </TouchableOpacity>
 
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-                <Text style={styles.cancelText}>Quay lại</Text>
-            </TouchableOpacity>
-        </ScrollView>
+                    <View style={{ height: 30 }} />
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
-const INPUT_H = 40;
+
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, paddingHorizontal: 18, paddingTop: Platform.OS === "android" ? 24 : 36, backgroundColor: "#fff" },
-    title: { fontSize: 24, fontWeight: "700", marginBottom: 18, color: colors.primary, textAlign: "center" },
-    rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
-    avatarBox: { width: 78, height: 78, borderRadius: 8, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center", marginRight: 18 },
-    avatarPlaceholder: { alignItems: "center" }, avatarText: { fontSize: 11, color: colors.textSecondary, marginTop: 4 }, avatarImg: { width: 78, height: 78, borderRadius: 6 },
-    clearAvatar: { position: "absolute", top: -6, right: -6, backgroundColor: "#d33", borderRadius: 12, padding: 2 },
-    input: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, marginBottom: 18, borderRadius: 8, height: INPUT_H, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
-    inputSmall: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, marginBottom: 18, borderRadius: 8, height: INPUT_H - 4, backgroundColor: "#fff", fontSize: 13 },
-    inputFlex: { flex: 1 }, half: { width: "48%" }, row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }, dateBtn: { justifyContent: "center" },
-    genderRow: { marginTop: 12, marginBottom: 18 },
-    genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
-    pickerWrap: {
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.background,
+    },
+
+    keyboardView: {
+        flex: 1,
+    },
+
+    container: {
+        flexGrow: 1,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        backgroundColor: colors.background,
+    },
+
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: colors.background,
+    },
+
+    loadingText: {
+        fontSize: 14,
+        color: colors.textPrimary,
+        marginTop: 12,
+        fontWeight: "600",
+    },
+
+    // ==================== HEADER ====================
+    headerContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingVertical: 12,
+        marginBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+    },
+
+    backButton: {
+        width: 40,
+        height: 40,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 10,
+        backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 8,
-        overflow: "hidden",
-        backgroundColor: "#fff",
-        height: 48,               // tăng chiều cao
-        justifyContent: "center", // căn giữa nội dung
-        paddingHorizontal: 6,
     },
+
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: colors.textPrimary,
+        letterSpacing: 0.3,
+    },
+
+    // ==================== ERROR MESSAGE ====================
+    errorContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(239, 83, 80, 0.1)",
+        borderLeftWidth: 3,
+        borderLeftColor: colors.error,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        marginBottom: 16,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: "rgba(239, 83, 80, 0.2)",
+    },
+
+    errorText: {
+        flex: 1,
+        fontSize: 13,
+        color: colors.error,
+        fontWeight: "600",
+    },
+
+    // ==================== PROFILE HEADER CARD ====================
+    profileHeaderCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: colors.border,
+        elevation: 3,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+    },
+
+    avatarRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 14,
+    },
+
+    avatarBox: {
+        width: 100,
+        height: 100,
+        borderRadius: 12,
+        backgroundColor: colors.backgroundAlt,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: colors.primary,
+        overflow: "hidden",
+        elevation: 2,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+    },
+
+    avatarImg: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
+
+    avatarPlaceholder: {
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    avatarText: {
+        fontSize: 12,
+        color: colors.accent,
+        marginTop: 6,
+        fontWeight: "700",
+    },
+
+    clearAvatarButton: {
+        position: "absolute",
+        top: 4,
+        right: 4,
+        backgroundColor: colors.background,
+        borderRadius: 12,
+        padding: 2,
+        elevation: 3,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+    },
+
+    profileInfoColumn: {
+        flex: 1,
+        gap: 10,
+    },
+
+    inputGroupSmall: {
+        flex: 1,
+    },
+
+    inputWrapperSmall: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.backgroundAlt,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 10,
+        height: 40,
+    },
+
+    inputWrapperDisabled: {
+        backgroundColor: "rgba(100, 100, 100, 0.1)",
+        borderColor: "rgba(100, 100, 100, 0.2)",
+    },
+
+    inputFieldSmall: {
+        flex: 1,
+        fontSize: 13,
+        color: colors.textPrimary,
+        fontWeight: "600",
+        paddingVertical: 8,
+    },
+
+    inputIcon: {
+        marginRight: 8,
+    },
+
+    // ==================== FORM SECTION ====================
+    formSection: {
+        marginBottom: 20,
+    },
+
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: "800",
+        color: colors.accent,
+        marginBottom: 14,
+        textTransform: "uppercase",
+        letterSpacing: 0.3,
+    },
+
+    rowContainer: {
+        flexDirection: "row",
+        gap: 10,
+        marginBottom: 10,
+    },
+
+    halfWidth: {
+        flex: 1,
+    },
+
+    inputLabel: {
+        fontSize: 12,
+        fontWeight: "800",
+        color: colors.textPrimary,
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: 0.2,
+    },
+
+    inputGroup: {
+        flex: 1,
+    },
+
+    inputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 12,
+        height: 48,
+        elevation: 2,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+    },
+
+    inputField: {
+        flex: 1,
+        fontSize: 14,
+        color: colors.textPrimary,
+        fontWeight: "600",
+    },
+
+    pickerWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: 12,
+        height: 48,
+        overflow: "hidden",
+        elevation: 2,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+    },
+
     picker: {
+        flex: 1,
         height: 48,
         color: colors.textPrimary,
-        width: "100%",
+        fontSize: 14,
     },
-    btn: { marginTop: 12, backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 8, alignItems: "center" }, btnDisabled: { opacity: 0.8 }, btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-    cancelBtn: { marginTop: 18, alignItems: "center", paddingVertical: 8 }, cancelText: { color: colors.textSecondary }, error: { color: "red", marginBottom: 12, textAlign: "center", padding: 8, borderWidth: 1, borderColor: "red", borderRadius: 4, backgroundColor: "#fee" }
+
+    // ==================== INFO CARD ====================
+    infoCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        padding: 12,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: 10,
+    },
+
+    infoRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+
+    infoText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        fontWeight: "600",
+        flex: 1,
+    },
+
+    // ==================== BUTTONS ====================
+    updateButton: {
+        flexDirection: "row",
+        backgroundColor: colors.primary,
+        paddingVertical: 14,
+        borderRadius: 10,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 10,
+        marginBottom: 10,
+        elevation: 4,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+    },
+
+    updateButtonText: {
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "800",
+        letterSpacing: 0.3,
+    },
+
+    buttonDisabled: {
+        opacity: 0.6,
+    },
+
+    cancelButton: {
+        flexDirection: "row",
+        backgroundColor: colors.surface,
+        paddingVertical: 12,
+        borderRadius: 10,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 10,
+        borderWidth: 2,
+        borderColor: colors.primary,
+        elevation: 2,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+    },
+
+    cancelButtonText: {
+        color: colors.primary,
+        fontSize: 15,
+        fontWeight: "800",
+        letterSpacing: 0.3,
+    },
 });
+
