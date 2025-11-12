@@ -262,16 +262,19 @@ const migrateDatabase = () => {
         user_id INTEGER NOT NULL,
         content TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+        hidden INTEGER NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT (datetime('now'))
       )`);
       const rvInfo = db.getAllSync("PRAGMA table_info(reviews)");
-      const cols = ["movie_id", "user_id", "content", "status", "created_at"];
+      const cols = ["movie_id", "user_id", "content", "status", "hidden", "created_at"];
       cols.forEach((c) => {
         const exists = rvInfo.some(col => col.name === c);
         if (!exists) {
           console.log(`🔄 Migrating: Adding reviews.${c}`);
           if (c === "status") {
             db.execSync("ALTER TABLE reviews ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
+          } else if (c === "hidden") {
+            db.execSync("ALTER TABLE reviews ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0");
           } else if (c === "created_at") {
             db.execSync("ALTER TABLE reviews ADD COLUMN created_at DATETIME DEFAULT (datetime('now'))");
           } else if (c === "content") {
@@ -712,15 +715,21 @@ export const addReview = (movieId, userId, content) => {
   }
 };
 
-export const getReviewsByMovie = (movieId) => {
+export const getReviewsByMovie = (movieId, includeHidden = false) => {
   try {
-    return db.getAllSync(
-      `SELECT r.*, a.name, a.avatar_uri
+    let query = `SELECT r.*, a.name, a.avatar_uri
         FROM reviews r 
         LEFT JOIN account a ON r.user_id = a.id 
-        WHERE r.movie_id = ? 
-        ORDER BY r.created_at DESC`, [movieId]
-    );
+        WHERE r.movie_id = ?`;
+    
+    // Nếu không phải admin, chỉ lấy review chưa bị ẩn
+    if (!includeHidden) {
+      query += ` AND (r.hidden = 0 OR r.hidden IS NULL)`;
+    }
+    
+    query += ` ORDER BY r.created_at DESC`;
+    
+    return db.getAllSync(query, [movieId]);
   } catch (error) {
     console.error("❌ Error getReviewsByMovie:", error);
     return [];
@@ -761,6 +770,26 @@ export const updateReview = (reviewId, content) => {
     return { success: true };
   } catch (error) {
     console.error("❌ Error updateReview:", error);
+    return { success: false, error };
+  }
+};
+
+export const hideReview = (reviewId) => {
+  try {
+    db.runSync("UPDATE reviews SET hidden = 1 WHERE id = ?", [reviewId]);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error hideReview:", error);
+    return { success: false, error };
+  }
+};
+
+export const unhideReview = (reviewId) => {
+  try {
+    db.runSync("UPDATE reviews SET hidden = 0 WHERE id = ?", [reviewId]);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error unhideReview:", error);
     return { success: false, error };
   }
 };
