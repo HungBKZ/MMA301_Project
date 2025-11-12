@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext';
-import { addReview, getReviewsByMovie, updateReview, deleteReview } from '../database/db';
+import { addReview, getReviewsByMovie, updateReview, deleteReview, hideReview, unhideReview } from '../database/db';
 import { useFocusEffect } from '@react-navigation/native';
 import {
     FlatList,
@@ -37,15 +37,19 @@ export default function ReviewListScreen({ route, navigation }) {
     const loadReviews = useCallback(() => {
         setLoading(true);
         try {
-            const data = getReviewsByMovie(movieId, true);
+            // Admin can view all reviews (including hidden ones), regular users only see non-hidden reviews
+            const isAdmin = user && (user.role === 'admin' || user.role === 'Admin');
+            const data = getReviewsByMovie(movieId, isAdmin);
             setReviews(data);
-            setReviewCount(data.length);
+            // Count visible reviews for users (excluding hidden reviews)
+            const visibleCount = isAdmin ? data.length : data.filter(r => !r.hidden).length;
+            setReviewCount(visibleCount);
         } catch (error) {
             console.error('Error loading reviews:', error);
         } finally {
             setLoading(false);
         }
-    }, [movieId]);
+    }, [movieId, user]);
 
     const handleSubmitReview = () => {
         if (!reviewContent.trim()) {
@@ -76,11 +80,11 @@ export default function ReviewListScreen({ route, navigation }) {
                 setModalVisible(false);
                 loadReviews();
             } else {
-                Alert.alert('Lỗi', result.message || 'Có lỗi xảy ra');
+                Alert.alert('Error', result.message || 'An error occurred');
             }
         } catch (error) {
             console.error('Error submitting review:', error);
-            Alert.alert('Lỗi', 'Có lỗi xảy ra');
+            Alert.alert('Error', 'An error occurred');
         } finally {
             setSubmitting(false);
         }
@@ -120,6 +124,33 @@ export default function ReviewListScreen({ route, navigation }) {
         );
     }
 
+    const handleHideReview = (review) => {
+        const isHidden = review.hidden === 1;
+        const action = isHidden ? unhideReview : hideReview;
+        const actionText = isHidden ? 'unhide' : 'hide';
+        
+        Alert.alert(
+            isHidden ? "Unhide Review" : "Hide Review",
+            `Are you sure you want to ${actionText} this review?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: isHidden ? "Unhide" : "Hide",
+                    style: isHidden ? "default" : "destructive",
+                    onPress: () => {
+                        const result = action(review.id);
+                        if (result.success) {
+                            Alert.alert("Success", `Review has been ${actionText}`);
+                            loadReviews();
+                        } else {
+                            Alert.alert("Error", "An error occurred");
+                        }
+                    }
+                }
+            ]
+        );
+    }
+
     useEffect(() => {
         loadReviews();
     }, [loadReviews]);
@@ -137,15 +168,17 @@ export default function ReviewListScreen({ route, navigation }) {
     }, [loadReviews]);
 
     const renderItem = ({ item }) => {
-        const createdAt = new Date(item.created_at).toLocaleDateString('vi-VN');
+        const createdAt = new Date(item.created_at).toLocaleDateString('en-US');
         const myReview = user && item.user_id === user.id;
+        const isAdmin = user && (user.role === 'admin' || user.role === 'Admin');
+        const isHidden = item.hidden === 1;
 
         return (
-            <View style={styles.reviewCard}>
+            <View style={[styles.reviewCard, isHidden && isAdmin && styles.hiddenReviewCard]}>
                 <View style={styles.userSection}>
-                    {item.avatar ? (
+                    {item.avatar_uri ? (
                         <Image
-                            source={{ uri: item.avatar }}
+                            source={{ uri: item.avatar_uri }}
                             style={styles.avatar}
                         />
                     ) : (
@@ -158,36 +191,64 @@ export default function ReviewListScreen({ route, navigation }) {
                         </View>
                     )}
                     <View style={styles.userInfo}>
-                        <Text style={styles.username}>{item.name || 'Anonymous'}</Text>
+                        <View style={styles.userInfoRow}>
+                            <Text style={styles.username}>{item.name || 'Anonymous'}</Text>
+                            {isHidden && isAdmin && (
+                                <View style={styles.hiddenBadge}>
+                                    <MaterialCommunityIcons
+                                        name="eye-off"
+                                        size={12}
+                                        color="#F44336"
+                                    />
+                                    <Text style={styles.hiddenBadgeText}>Hidden</Text>
+                                </View>
+                            )}
+                        </View>
                         <Text style={styles.createdAt}>{createdAt}</Text>
                     </View>
-                    {myReview && (
-                        <View style={styles.actionIcons}>
+                    <View style={styles.actionIcons}>
+                        {myReview && (
+                            <>
+                                <TouchableOpacity
+                                    style={styles.iconButton}
+                                    onPress={() => handleEditReview(item)}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="pencil"
+                                        size={18}
+                                        color={colors.primary}
+                                    />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.iconButton}
+                                    onPress={() => handleDeleteReview(item.id)}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="trash-can"
+                                        size={18}
+                                        color="#F44336"
+                                    />
+                                </TouchableOpacity>
+                            </>
+                        )}
+                        {isAdmin && (
                             <TouchableOpacity
                                 style={styles.iconButton}
-                                onPress={() => handleEditReview(item)}
+                                onPress={() => handleHideReview(item)}
                             >
                                 <MaterialCommunityIcons
-                                    name="pencil"
+                                    name={isHidden ? "eye" : "eye-off"}
                                     size={18}
-                                    color={colors.primary}
+                                    color={isHidden ? "#4CAF50" : "#FF9800"}
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.iconButton}
-                                onPress={() => handleDeleteReview(item.id)}
-                            >
-                                <MaterialCommunityIcons
-                                    name="trash-can"
-                                    size={18}
-                                    color="#F44336"
-                                />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                        )}
+                    </View>
                 </View>
 
-                <Text style={styles.reviewContent}>{item.content}</Text>
+                <Text style={[styles.reviewContent, isHidden && isAdmin && styles.hiddenReviewContent]}>
+                    {item.content}
+                </Text>
 
             </View >
         );
@@ -243,7 +304,7 @@ export default function ReviewListScreen({ route, navigation }) {
             <Modal
                 visible={modalVisible}
                 transparent={true}
-                animationType="fade"  // ✅ Sửa từ "slide" thành "fade"
+                animationType="fade"  // Changed from "slide" to "fade"
                 onRequestClose={() => setModalVisible(false)}
             >
                 <View style={styles.modalOverlayContainer}>
@@ -270,17 +331,17 @@ export default function ReviewListScreen({ route, navigation }) {
                                 />
                             </TouchableOpacity>
                             <Text style={styles.modalTitle}>
-                                {editingReviewId ? 'Sửa đánh giá' : 'Viết đánh giá'}
+                                {editingReviewId ? 'Edit Review' : 'Write Review'}
                             </Text>
                             <View style={{ width: 24 }} />
                         </View>
 
                         {/* Input Area */}
                         <View style={styles.modalBody}>
-                            <Text style={styles.label}>Nội dung đánh giá</Text>
+                            <Text style={styles.label}>Review Content</Text>
                             <TextInput
                                 style={styles.textInput}
-                                placeholder="Chia sẻ cảm nhận của bạn về bộ phim này..."
+                                placeholder="Share your thoughts about this movie..."
                                 placeholderTextColor={colors.textSecondary}
                                 multiline
                                 numberOfLines={6}
@@ -290,7 +351,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                 textAlignVertical="top"
                             />
                             <Text style={styles.charCount}>
-                                {reviewContent.length} / 500 ký tự
+                                {reviewContent.length} / 500 characters
                             </Text>
 
                             <View style={styles.guidelineContainer}>
@@ -300,7 +361,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                     color={colors.primary}
                                 />
                                 <Text style={styles.guidelineText}>
-                                    Hãy viết đánh giá trung thực và có ích cho cộng đồng
+                                    Please write an honest and helpful review for the community
                                 </Text>
                             </View>
                         </View>
@@ -315,7 +376,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                     setReviewContent('');
                                 }}
                             >
-                                <Text style={styles.cancelButtonText}>Hủy</Text>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -337,7 +398,7 @@ export default function ReviewListScreen({ route, navigation }) {
                                             color="#fff"
                                         />
                                         <Text style={styles.submitButtonText}>
-                                            {editingReviewId ? 'Cập nhật' : 'Gửi'}
+                                            {editingReviewId ? 'Update' : 'Submit'}
                                         </Text>
                                     </>
                                 )}
@@ -399,6 +460,11 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 2,
     },
+    hiddenReviewCard: {
+        backgroundColor: '#f5f5f5',
+        borderLeftWidth: 3,
+        borderLeftColor: '#FF9800',
+    },
     userSection: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -418,11 +484,30 @@ const styles = StyleSheet.create({
     userInfo: {
         flex: 1,
     },
+    userInfoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
     username: {
         fontSize: 14,
         fontWeight: '600',
         color: colors.text,
-        marginBottom: 4,
+    },
+    hiddenBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#FFEBEE',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    hiddenBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#F44336',
     },
     createdAt: {
         fontSize: 12,
@@ -433,6 +518,10 @@ const styles = StyleSheet.create({
         color: colors.text,
         lineHeight: 20,
         marginBottom: 12,
+    },
+    hiddenReviewContent: {
+        opacity: 0.6,
+        fontStyle: 'italic',
     },
     statusBadge: {
         flexDirection: 'row',
