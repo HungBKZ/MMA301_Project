@@ -248,8 +248,6 @@ const MovieDetailScreen = ({ route, navigation }) => {
   /** Đi tới màn hình chọn suất chiếu (Booking) */
   const handleBooking = () => {
     try {
-      // chuyển sang màn hình Showtime để chọn ngày/rap/suất
-      // Navigate directly to the Showtime screen (registered in HomeStack)
       navigation.navigate("Showtime", {
         movieId: movie.id,
         movieTitle: movie.title,
@@ -465,26 +463,40 @@ const MovieDetailScreen = ({ route, navigation }) => {
         {user?.role === 'User' && movie.status === 'SHOWING' && !isEditing && (
           <View style={styles.ticketCard}>
             <View style={styles.ticketHeader}>
-              <Ionicons name="ticket" size={24} color={colors.primary} />
-              <Text style={styles.ticketTitle}>Mua ve xem phim</Text>
+              <View style={styles.ticketIconBadge}>
+                <Ionicons name="ticket" size={28} color="#FFFFFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ticketTitle}>🎬 Phim Đang Chiếu</Text>
+                <Text style={styles.ticketSubtitle}>Đặt vé ngay để không bỏ lỡ!</Text>
+              </View>
             </View>
-            <Text style={styles.ticketDescription}>
-              Phim dang chieu! Dat ve ngay de khong bo lo.
-            </Text>
-            <TouchableOpacity
-              style={styles.bookButton}
-              onPress={() => Alert.alert('Coming Soon', 'Tinh nang dat ve se co som!')}
-            >
-              <Ionicons name="calendar" size={20} color="#FFFFFF" />
-              <Text style={styles.bookButtonText}>Chon suat chieu</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.findCinemaButton}
-              onPress={() => navigation.navigate('Maps')}
-            >
-              <Ionicons name="location" size={20} color={colors.primary} />
-              <Text style={styles.findCinemaText}>Tim rap gan ban</Text>
-            </TouchableOpacity>
+
+            <View style={styles.ticketButtonsContainer}>
+              <TouchableOpacity
+                style={styles.bookButtonPrimary}
+                onPress={handleBooking}
+                activeOpacity={0.85}
+              >
+                <View style={styles.bookButtonContent}>
+                  <Ionicons name="calendar" size={24} color="#FFFFFF" />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={styles.bookButtonMainText}>Chọn Suất Chiếu</Text>
+                    <Text style={styles.bookButtonSubText}>Đặt vé ngay</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.findCinemaButton}
+                onPress={() => navigation.navigate('Maps')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="location" size={22} color={colors.primary} />
+                <Text style={styles.findCinemaText}>Tìm Rạp Gần Bạn</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -515,7 +527,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
         ) : (
           <>
             {/* Admin Actions - Only show for Admin role */}
-            {user?.role === 'Admin' && (
+            {user?.role === 'admin' && (
               <View style={styles.actionContainer}>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -542,40 +554,33 @@ const MovieDetailScreen = ({ route, navigation }) => {
             )}
 
             {/* User Actions - Show for all users */}
-            <View style={[styles.actionContainer, { marginTop: user?.role === 'Admin' ? 8 : 0 }]}>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
-                onPress={handleAddToWishlist}
-              >
-                <Ionicons name="heart" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Wishlist</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.accent }]}
-                onPress={openAddToCollection}
-              >
-                <Ionicons name="albums" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
-              </TouchableOpacity>
-              {/* spacers to keep the same width as other buttons */}
-              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
-              <View style={[styles.actionButton, { opacity: 0 }]} pointerEvents="none" />
+            {/* User Actions - Show only for non-admin users */}
+            {user?.role !== 'admin' && (
+              <View style={[styles.actionContainer, { marginTop: user?.role === 'admin' ? 12 : 0 }]}>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#FF6B6B' }]}
+                  onPress={handleAddToWishlist}
+                >
+                  <Ionicons name="heart" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Wishlist</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.accent }]}
+                  onPress={openAddToCollection}
+                >
+                  <Ionicons name="albums" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Add to{"\n"}Collection</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.accent }]}
-                onPress={handleBooking}
-              >
-                <Ionicons name="airplane" size={20} color="#FFFFFF" />
-                <Text style={styles.editButtonText}>Booking</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
-              >
-                <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Review</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#9C27B0' }]}
+                  onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
+                >
+                  <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Review</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </View>
@@ -742,7 +747,11 @@ const styles = StyleSheet.create({
     minWidth: 150,
     overflow: "hidden",
   },
-  actionContainer: { flexDirection: "row", justifyContent: "space-between" },
+  actionContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
   actionButton: {
     flex: 1,
     alignItems: "center",
@@ -832,67 +841,99 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-  // Ticket Card Styles
+  // ========== TICKET CARD STYLES ==========
   ticketCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(76, 175, 80, 0.08)",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
+    borderColor: "#4CAF50",
+    shadowColor: "#4CAF50",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 5,
   },
   ticketHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  ticketIconBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+    shadowColor: "#4CAF50",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   ticketTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginLeft: 10,
+    fontWeight: "700",
+    color: "#2E7D32",
+    marginBottom: 4,
   },
-  ticketDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 16,
-    lineHeight: 20,
+  ticketSubtitle: {
+    fontSize: 13,
+    color: "#4CAF50",
+    fontWeight: "500",
   },
-  bookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 10,
+  ticketButtonsContainer: {
+    gap: 10,
   },
-  bookButtonText: {
-    color: '#FFFFFF',
+  bookButtonPrimary: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    shadowColor: "#4CAF50",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  bookButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bookButtonMainText: {
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 8,
+    fontWeight: "700",
+  },
+  bookButtonSubText: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 2,
   },
   findCinemaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: "#4CAF50",
   },
   findCinemaText: {
-    color: colors.primary,
+    color: "#4CAF50",
     fontSize: 15,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontWeight: "600",
+    marginLeft: 10,
+  },
+  picker: {
+    color: colors.textPrimary,
   },
 });
 

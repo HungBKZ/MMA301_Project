@@ -42,7 +42,7 @@ const SearchScreen = ({ navigation }) => {
   /** Thực hiện tìm kiếm theo title hoặc category */
   const handleSearch = () => {
     console.log("🔍 Searching for:", searchQuery);
-    
+
     if (!searchQuery.trim()) {
       console.log("⚠️ Search query is empty");
       alert("Please enter a search term");
@@ -61,7 +61,7 @@ const SearchScreen = ({ navigation }) => {
     const year = filterYear ? parseInt(filterYear) : null;
     const status = filterStatus || null;
     const category = filterCategory || null;
-    
+
     console.log("🔍 Filtering - Year:", year, "Status:", status, "Category:", category);
 
     if (!year && !status && !category) {
@@ -102,8 +102,8 @@ const SearchScreen = ({ navigation }) => {
       item.status === "Watched"
         ? colors.watched
         : item.status === "Favorite"
-        ? colors.favorite
-        : colors.toWatch;
+          ? colors.favorite
+          : colors.toWatch;
     return (
       <TouchableOpacity
         style={styles.movieCard}
@@ -149,12 +149,12 @@ const SearchScreen = ({ navigation }) => {
           {searchMode === "search"
             ? `No movies found for "${searchQuery}"\nTry different keywords`
             : `No movies match your filters\n${[
-                filterYear && `Year: ${filterYear}`,
-                filterCategory && `Category: ${filterCategory}`,
-                filterStatus && `Status: ${filterStatus}`
-              ].filter(Boolean).join(" • ")}`}
+              filterYear && `Year: ${filterYear}`,
+              filterCategory && `Category: ${filterCategory}`,
+              filterStatus && `Status: ${filterStatus}`
+            ].filter(Boolean).join(" • ")}`}
         </Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.resetHintButton}
           onPress={handleReset}
           activeOpacity={0.7}

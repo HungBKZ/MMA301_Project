@@ -10,9 +10,11 @@ import {
   Platform,
   Image,
   Alert,
+  SafeAreaView,
+  KeyboardAvoidingView,
 } from "react-native";
-import { colors } from "../../styles/commonStyles";
-import { Ionicons } from "@expo/vector-icons";
+import { colors, commonStyles } from "../../styles/commonStyles";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
@@ -50,8 +52,12 @@ export default function RegisterScreen({ navigation }) {
         allowsEditing: true,
         aspect: [1, 1],
       });
-      if (!res.canceled && res.assets && res.assets[0]?.uri) setAvatarUri(res.assets[0].uri);
-    } catch (e) { }
+      if (!res.canceled && res.assets && res.assets[0]?.uri) {
+        setAvatarUri(res.assets[0].uri);
+      }
+    } catch (e) {
+      console.error("Error picking image:", e);
+    }
   };
 
   const clearAvatar = () => setAvatarUri("");
@@ -80,18 +86,38 @@ export default function RegisterScreen({ navigation }) {
   const onRegister = async () => {
     setErr(null);
     if (!email.trim() || !password || !confirmPassword || !phone || !dateOfBirth || !gender) {
-      setErr("Vui lòng điền đầy đủ các trường bắt buộc (*)."); return;
+      setErr("Vui lòng điền đầy đủ các trường bắt buộc (*).");
+      return;
     }
-    if (!isEmailValid(email.trim())) { setErr("Email không đúng định dạng."); return; }
-    if (!isPhoneValid(phone.trim())) { setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0."); return; }
-    if (!isDobValid(dateOfBirth.trim())) { setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi."); return; }
-    if (!isPasswordValid(password)) { setErr("Mật khẩu phải có ít nhất 6 ký tự, bao gồm chữ và số."); return; }
-    if (password !== confirmPassword) { setErr("Mật khẩu xác nhận không khớp."); return; }
+    if (!isEmailValid(email.trim())) {
+      setErr("Email không đúng định dạng.");
+      return;
+    }
+    if (!isPhoneValid(phone.trim())) {
+      setErr("Số điện thoại phải có 10 chữ số và bắt đầu bằng 0.");
+      return;
+    }
+    if (!isDobValid(dateOfBirth.trim())) {
+      setErr("Ngày sinh không hợp lệ hoặc dưới 13 tuổi.");
+      return;
+    }
+    if (!isPasswordValid(password)) {
+      setErr("Mật khẩu phải có ít nhất 6 ký tự, bao gồm chữ và số.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErr("Mật khẩu xác nhận không khớp.");
+      return;
+    }
 
     setLoading(true);
     try {
       const existing = getUserByEmail(email.trim());
-      if (existing) { setErr("EMAIL_EXISTS"); setLoading(false); return; }
+      if (existing) {
+        setErr("Email này đã được đăng ký.");
+        setLoading(false);
+        return;
+      }
       const r = await addUser(
         email.trim(),
         password,
@@ -102,8 +128,11 @@ export default function RegisterScreen({ navigation }) {
         dateOfBirth.trim(),
         gender
       );
-      if (!r.success) { setErr("Đăng ký thất bại"); setLoading(false); return; }
-      // fetch user to read role (default User)
+      if (!r.success) {
+        setErr("Đăng ký thất bại");
+        setLoading(false);
+        return;
+      }
       const user = getUserByEmail(email.trim());
       if (user) {
         await login({
@@ -113,9 +142,9 @@ export default function RegisterScreen({ navigation }) {
           phone: user.phone,
           date_of_birth: user.date_of_birth,
           gender: user.gender,
+          name: user.name,
         });
       }
-      // AuthProvider state updated — AppNavigator will switch to MainTabs automatically.
     } catch (e) {
       console.error("Register error:", e);
       setErr("Lỗi khi đăng ký.");
@@ -125,128 +154,595 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Tạo tài khoản</Text>
-      {err ? <Text style={styles.error}>{err}</Text> : null}
-      <View style={styles.rowTop}>
-        <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
-          {avatarUri ? (
-            <>
-              <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
-              <TouchableOpacity style={styles.clearAvatar} onPress={clearAvatar}>
-                <Ionicons name="close-circle" size={18} color="#fff" />
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* ==================== HEADER ==================== */}
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                style={styles.backButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-back" size={24} color={colors.primary} />
               </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="camera" size={22} color={colors.textSecondary} />
-              <Text style={styles.avatarText}>Avatar</Text>
+              <Text style={styles.headerTitle}>Tạo tài khoản</Text>
+              <View style={{ width: 40 }} />
             </View>
-          )}
-        </TouchableOpacity>
 
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <TextInput placeholder="Họ tên (tùy chọn)" value={name} onChangeText={setName} style={styles.inputSmall} />
-          <TextInput placeholder="Email *" value={email} onChangeText={setEmail} style={styles.inputSmall} keyboardType="email-address" autoCapitalize="none" />
-        </View>
-      </View>
+            {/* ==================== TITLE CARD ==================== */}
+            <View style={styles.titleCard}>
+              <View style={styles.titleIconContainer}>
+                <Ionicons name="person-add" size={40} color={colors.accent} />
+              </View>
+              <Text style={styles.title}>Tạo tài khoản mới</Text>
+              <Text style={styles.subtitle}>Đăng ký để bắt đầu trải nghiệm</Text>
+            </View>
 
-      <View style={styles.row}>
-        <TextInput placeholder="Số điện thoại *" value={phone} onChangeText={setPhone} style={[styles.input, styles.half]} keyboardType="phone-pad" />
-        <TouchableOpacity style={[styles.input, styles.half, styles.dateBtn]} onPress={() => setShowDatePicker(true)}>
-          <Text style={{ color: dateOfBirth ? "#000" : colors.textSecondary }}>{dateOfBirth || "Ngày sinh *"}</Text>
-        </TouchableOpacity>
-      </View>
+            {/* ==================== ERROR MESSAGE ==================== */}
+            {err && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.error} />
+                <Text style={styles.errorText}>{err}</Text>
+              </View>
+            )}
 
-      {showDatePicker && (
-        <DateTimePicker value={dateOfBirth ? new Date(dateOfBirth) : new Date(new Date().getFullYear() - 20, 0, 1)} mode="date" display="default" maximumDate={new Date()} onChange={onChangeDate} />
-      )}
+            {/* ==================== AVATAR SECTION ==================== */}
+            <View style={styles.avatarSection}>
+              <Text style={styles.sectionLabel}>Ảnh đại diện</Text>
+              <TouchableOpacity
+                style={styles.avatarBox}
+                onPress={pickImage}
+                activeOpacity={0.8}
+              >
+                {avatarUri ? (
+                  <>
+                    <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                    <TouchableOpacity
+                      style={styles.clearAvatarButton}
+                      onPress={clearAvatar}
+                      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                    >
+                      <Ionicons name="close-circle" size={24} color={colors.error} />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Ionicons name="camera" size={40} color={colors.accent} />
+                    <Text style={styles.avatarText}>Thêm ảnh đại diện</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
 
-      <View style={styles.genderRow}>
-        <Text style={styles.genderLabel}>Giới tính *</Text>
-        <View style={styles.pickerWrap}>
-          <Picker selectedValue={gender} onValueChange={(value) => setGender(value)} mode="dropdown" style={styles.picker}>
-            <Picker.Item label="Chọn giới tính..." value="" />
-            <Picker.Item label="Nam" value="male" />
-            <Picker.Item label="Nữ" value="female" />
-            <Picker.Item label="Khác" value="other" />
-          </Picker>
-        </View>
-      </View>
+            {/* ==================== BASIC INFO SECTION ==================== */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionLabel}>Thông tin cơ bản</Text>
 
-      <View style={styles.passwordRow}>
-        <TextInput placeholder="Mật khẩu (6+ ký tự, chữ + số) *" secureTextEntry={!showPassword} value={password} onChangeText={setPassword} style={[styles.input, styles.inputFlex]} />
-        <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeBtn}>
-          <Ionicons name={showPassword ? "eye" : "eye-off"} size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+              {/* Name */}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="person" size={18} color={colors.accent} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Họ tên (tùy chọn)"
+                  value={name}
+                  onChangeText={setName}
+                  style={styles.inputField}
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
 
-      <View style={styles.passwordRow}>
-        <TextInput placeholder="Xác nhận mật khẩu *" secureTextEntry={!showConfirm} value={confirmPassword} onChangeText={setConfirmPassword} style={[styles.input, styles.inputFlex]} />
-        <TouchableOpacity onPress={() => setShowConfirm((s) => !s)} style={styles.eyeBtn}>
-          <Ionicons name={showConfirm ? "eye" : "eye-off"} size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+              {/* Email */}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail" size={18} color={colors.accent} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Email *"
+                  value={email}
+                  onChangeText={setEmail}
+                  style={styles.inputField}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+            </View>
 
-      <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={onRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Tạo tài khoản</Text>}
-      </TouchableOpacity>
+            {/* ==================== CONTACT INFO SECTION ==================== */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionLabel}>Thông tin liên hệ</Text>
 
-      <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.cancelText}>Quay lại / Đăng nhập</Text>
-      </TouchableOpacity>
-    </ScrollView>
+              {/* Phone */}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="call" size={18} color={colors.accent} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Số điện thoại *"
+                  value={phone}
+                  onChangeText={setPhone}
+                  style={styles.inputField}
+                  keyboardType="phone-pad"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              {/* Date of Birth & Gender */}
+              <View style={styles.rowContainer}>
+                <TouchableOpacity
+                  style={[styles.inputWrapper, styles.halfWidth]}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="calendar" size={18} color={colors.accent} style={styles.inputIcon} />
+                  <Text
+                    style={[
+                      styles.inputField,
+                      { color: dateOfBirth ? colors.textPrimary : colors.textSecondary },
+                    ]}
+                  >
+                    {dateOfBirth || "Ngày sinh *"}
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={[styles.pickerWrapper, styles.halfWidth]}>
+                  <Ionicons name="people" size={18} color={colors.accent} style={styles.inputIcon} />
+                  <Picker
+                    selectedValue={gender}
+                    onValueChange={(value) => setGender(value)}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Giới tính *" value="" />
+                    <Picker.Item label="Nam" value="male" />
+                    <Picker.Item label="Nữ" value="female" />
+                    <Picker.Item label="Khác" value="other" />
+                  </Picker>
+                </View>
+              </View>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dateOfBirth ? new Date(dateOfBirth) : new Date(new Date().getFullYear() - 20, 0, 1)}
+                  mode="date"
+                  display="default"
+                  maximumDate={new Date()}
+                  onChange={onChangeDate}
+                />
+              )}
+            </View>
+
+            {/* ==================== SECURITY SECTION ==================== */}
+            <View style={styles.formSection}>
+              <Text style={styles.sectionLabel}>Bảo mật</Text>
+
+              {/* Password */}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed" size={18} color={colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Mật khẩu (6+ ký tự, chữ + số) *"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  style={[styles.inputField, { flex: 1 }]}
+                  placeholderTextColor={colors.textSecondary}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((s) => !s)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={18}
+                    color={colors.accent}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Confirm Password */}
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed" size={18} color={colors.primary} style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Xác nhận mật khẩu *"
+                  secureTextEntry={!showConfirm}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  style={[styles.inputField, { flex: 1 }]}
+                  placeholderTextColor={colors.textSecondary}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirm((s) => !s)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showConfirm ? "eye" : "eye-off"}
+                    size={18}
+                    color={colors.accent}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* ==================== PASSWORD REQUIREMENTS ==================== */}
+            <View style={styles.requirementsCard}>
+              <View style={styles.requirementRow}>
+                <Ionicons
+                  name={password.length >= 6 ? "checkmark-circle" : "ellipse-outline"}
+                  size={16}
+                  color={password.length >= 6 ? colors.success : colors.textSecondary}
+                />
+                <Text style={styles.requirementText}>Ít nhất 6 ký tự</Text>
+              </View>
+              <View style={styles.requirementRow}>
+                <Ionicons
+                  name={/[A-Za-z]/.test(password) ? "checkmark-circle" : "ellipse-outline"}
+                  size={16}
+                  color={/[A-Za-z]/.test(password) ? colors.success : colors.textSecondary}
+                />
+                <Text style={styles.requirementText}>Có chữ cái</Text>
+              </View>
+              <View style={styles.requirementRow}>
+                <Ionicons
+                  name={/\d/.test(password) ? "checkmark-circle" : "ellipse-outline"}
+                  size={16}
+                  color={/\d/.test(password) ? colors.success : colors.textSecondary}
+                />
+                <Text style={styles.requirementText}>Có số</Text>
+              </View>
+            </View>
+
+            {/* ==================== ACTION BUTTONS ==================== */}
+            <TouchableOpacity
+              style={[styles.registerButton, loading && styles.buttonDisabled]}
+              onPress={onRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.registerButtonText}>Tạo tài khoản</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.backButton2}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="arrow-back" size={18} color={colors.primary} />
+              <Text style={styles.backButtonText}>Quay lại đăng nhập</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 30 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }
 
-const INPUT_H = 40;
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, paddingHorizontal: 14, paddingTop: Platform.OS === "android" ? 14 : 26, backgroundColor: "#fff" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 8, color: colors.primary },
-  rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  avatarBox: { width: 78, height: 78, borderRadius: 8, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  avatarPlaceholder: { alignItems: "center" },
-  avatarText: { fontSize: 11, color: colors.textSecondary, marginTop: 4 },
-  avatarImg: { width: 78, height: 78, borderRadius: 6 },
-  clearAvatar: { position: "absolute", top: -6, right: -6, backgroundColor: "#d33", borderRadius: 12, padding: 2 },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
 
-  input: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, marginBottom: 8, borderRadius: 8, height: INPUT_H, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
-  // tăng height và padding để text không bị che
-  inputSmall: { borderWidth: 1, borderColor: colors.border, paddingHorizontal: 8, marginBottom: 10, borderRadius: 8, height: INPUT_H + 4, backgroundColor: "#fff", fontSize: 13, justifyContent: "center" },
+  safeArea: {
+    flex: 1,
+  },
 
-  inputFlex: { flex: 1 },
-  half: { width: "48%" },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  dateBtn: { justifyContent: "center" },
+  keyboardView: {
+    flex: 1,
+  },
 
-  genderLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 8 },
-  // tăng marginBottom, padding dọc và đảm bảo chiều cao phù hợp
-  pickerWrap: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+
+  // ==================== HEADER ====================
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: 20,
+  },
+
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: "#fff",
-    height: 50,
-    justifyContent: "center",
-    paddingHorizontal: 8,
-    marginBottom: 12, // khoảng cách dưới picker
-  },
-  picker: {
-    height: 50,
-    color: colors.textPrimary,
-    width: "100%",
-    fontSize: 13,
-    lineHeight: 20,
-    paddingVertical: Platform.OS === "android" ? 6 : 0, // android cần padding dọc
   },
 
-  passwordRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  eyeBtn: { marginLeft: 8, padding: 6, justifyContent: "center", alignItems: "center" },
-  btn: { marginTop: 6, backgroundColor: colors.primary, paddingVertical: 10, borderRadius: 8, alignItems: "center" },
-  btnDisabled: { opacity: 0.8 },
-  btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-  cancelBtn: { marginTop: 8, alignItems: "center", paddingVertical: 6 },
-  cancelText: { color: colors.textSecondary },
-  error: { color: "red", marginBottom: 6, textAlign: "center", padding: 6, borderWidth: 1, borderColor: "red", borderRadius: 4, backgroundColor: "#fee" }
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+
+  // ==================== TITLE CARD ====================
+  titleCard: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  titleIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 14,
+    elevation: 3,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
+
+  subtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+
+  // ==================== ERROR MESSAGE ====================
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 83, 80, 0.1)',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.error,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 83, 80, 0.2)',
+  },
+
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.error,
+    fontWeight: '600',
+  },
+
+  // ==================== AVATAR SECTION ====================
+  avatarSection: {
+    marginBottom: 24,
+  },
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.accent,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+
+  avatarBox: {
+    width: '100%',
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  avatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+
+  avatarText: {
+    fontSize: 14,
+    color: colors.accent,
+    marginTop: 8,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+
+  clearAvatarButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    padding: 4,
+    elevation: 3,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+
+  // ==================== FORM SECTIONS ====================
+  formSection: {
+    marginBottom: 20,
+  },
+
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+
+  inputIcon: {
+    marginRight: 10,
+  },
+
+  inputField: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+
+  // ==================== ROW CONTAINER ====================
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  halfWidth: {
+    flex: 1,
+  },
+
+  pickerWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    height: 48,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+  },
+
+  picker: {
+    flex: 1,
+    height: 48,
+    color: colors.textPrimary,
+    fontSize: 14,
+  },
+
+  // ==================== PASSWORD REQUIREMENTS ====================
+  requirementsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  requirementText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+
+  // ==================== BUTTONS ====================
+  registerButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
+  backButton2: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    elevation: 2,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+
+  backButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
 });
+

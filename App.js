@@ -19,6 +19,7 @@ import AddMovieScreen from "./src/screens/AddMovieScreen";
 import MovieDetailScreen from "./src/screens/MovieDetailScreen";
 import SearchScreen from "./src/screens/SearchScreen";
 import CategoryReportScreen from "./src/screens/CategoryReportScreen";
+import ListMovieScreen from "./src/screens/ListMovieScreen";
 import FavoriteYearsReportScreen from "./src/screens/FavoriteYearsReportScreen";
 import DataManagementScreen from "./src/screens/DataManagementScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
@@ -120,6 +121,11 @@ function HomeStack() {
         options={{ title: "Movie Details" }}
       />
       <Stack.Screen
+        name="ListMovies"
+        component={ListMovieScreen}
+        options={{ title: "All Movies" }}
+      />
+      <Stack.Screen
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
@@ -170,6 +176,11 @@ function UserHomeStack() {
         name="Showtime"
         component={ShowtimeScreen}
         options={{ title: "Showtimes" }}
+      />
+      <Stack.Screen
+        name="ListMovies"
+        component={ListMovieScreen}
+        options={{ title: "All Movies" }}
       />
       <Stack.Screen
         name="RoomMap"
@@ -671,5 +682,4 @@ export default function App() {
     </AuthProvider>
   );
 }
-
 

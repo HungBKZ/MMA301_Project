@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from "react-native";
 import * as Location from "expo-location";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { colors } from "../../styles/commonStyles";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, commonStyles } from "../../styles/commonStyles";
 import { findNearbyCinemas as findNearbyCinemasDB } from "../../database/db";
 
 // Vị trí mặc định: Cần Thơ, Việt Nam
@@ -58,8 +59,8 @@ export default function MapsScreen() {
 
       // Tìm rạp từ database (bán kính 15km)
       const nearbyCinemas = findNearbyCinemasDB(
-        userLocation.latitude, 
-        userLocation.longitude, 
+        userLocation.latitude,
+        userLocation.longitude,
         15
       );
 
@@ -74,13 +75,13 @@ export default function MapsScreen() {
 
       // Chỉ lấy 3 rạp gần nhất và đổi tên thành AquaCode Cinema 1, 2, 3
       const top3Cinemas = nearbyCinemas.slice(0, 3);
-      
+
       // Format cinemas với tên AquaCode Cinema và id
       const formattedCinemas = top3Cinemas.map((cinema, index) => ({
         id: index + 1,
         latitude: cinema.latitude,
         longitude: cinema.longitude,
-        title: `AquaCode Cinema ${index + 1}`,
+        title: `CGV Cinema ${index + 1}`,
         address: cinema.address,
         phone: cinema.phone,
         distance: cinema.distance,
@@ -103,7 +104,7 @@ export default function MapsScreen() {
 
   const openMap = (latitude, longitude, title) => {
     const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-    Linking.openURL(url).catch(() => 
+    Linking.openURL(url).catch(() =>
       Alert.alert("Lỗi", "Không thể mở bản đồ")
     );
   };
@@ -122,17 +123,31 @@ export default function MapsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ==================== HEADER ==================== */}
       <View style={styles.header}>
-        <Text style={styles.title}>Tim Rap Chieu Phim</Text>
+        <View style={styles.headerContent}>
+          <Ionicons name="location" size={28} color={colors.primary} />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={styles.headerSubtitle}>Tìm rạp chiếu phim</Text>
+            <Text style={styles.headerTitle}>Gần bạn</Text>
+          </View>
+        </View>
+
         {locationError && (
-          <Text style={styles.locationWarning}>
-            ⚠️ Khong lay duoc vi tri GPS. Su dung vi tri mac dinh (Can Tho)
-          </Text>
+          <View style={styles.locationWarningContainer}>
+            <Ionicons name="warning" size={16} color={colors.warning} />
+            <Text style={styles.locationWarning}>
+              Không lấy được vị trí GPS. Sử dụng vị trí mặc định (Cần Thơ)
+            </Text>
+          </View>
         )}
       </View>
 
-      {/* Map hiển thị vị trí */}
+      {/* ==================== MAP CONTAINER ==================== */}
       <View style={styles.mapContainer}>
         <MapView
           provider={PROVIDER_GOOGLE}
@@ -155,8 +170,8 @@ export default function MapsScreen() {
           {/* Marker vị trí người dùng */}
           <Marker
             coordinate={userLocation}
-            title="Vi tri cua ban"
-            description={locationError ? "Vi tri mac dinh" : "Vi tri hien tai"}
+            title="Vị trí của bạn"
+            description={locationError ? "Vị trí mặc định" : "Vị trí hiện tại"}
             pinColor="blue"
           />
 
@@ -174,246 +189,431 @@ export default function MapsScreen() {
             />
           ))}
         </MapView>
-      </View>
 
-      <View style={styles.buttonGroup}>
-        <Button
-          title="Tim Rap Gan Day"
+        {/* Search Button Overlay */}
+        <TouchableOpacity
+          style={styles.searchButton}
           onPress={handleFindCinemas}
-          color={colors.primary}
           disabled={loading}
-        />
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons name="search" size={20} color="#FFFFFF" />
+              <Text style={styles.searchButtonText}>Tìm rạp gần đây</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
 
+      {/* ==================== LOADING STATE ==================== */}
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Dang tim rap gan ban...</Text>
+          <Text style={styles.loadingText}>Đang tìm rạp gần bạn...</Text>
+          <Text style={styles.loadingSubtext}>Vui lòng chờ...</Text>
         </View>
       )}
 
+      {/* ==================== RESULTS CONTAINER ==================== */}
       {showResults && !loading && (
         <View style={styles.resultsContainer}>
-          {/* Cinema List */}
           {cinemas.length > 0 && (
             <View style={styles.cinemaListContainer}>
-              <Text style={styles.sectionTitle}>
-                📍 Tim thay {cinemas.length} rap chieu phim:
-              </Text>
+              <View style={styles.resultsHeader}>
+                <Ionicons name="pin" size={24} color={colors.primary} />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={styles.resultTitle}>Tìm thấy {cinemas.length} rạp</Text>
+                  <Text style={styles.resultSubtitle}>Trong vòng 15km từ vị trí của bạn</Text>
+                </View>
+              </View>
+
+              {/* Cinema Cards */}
               {cinemas.map((cinema, index) => (
                 <TouchableOpacity
                   key={index}
                   style={styles.cinemaCard}
                   onPress={() => openMap(cinema.latitude, cinema.longitude, cinema.title)}
+                  activeOpacity={0.8}
                 >
+                  {/* Card Header */}
                   <View style={styles.cinemaHeader}>
-                    <Text style={styles.cinemaNumber}>{index + 1}</Text>
+                    <View style={styles.cinemaRankContainer}>
+                      <Text style={styles.cinemaRank}>{index + 1}</Text>
+                    </View>
                     <View style={styles.cinemaMainInfo}>
                       <Text style={styles.cinemaTitle}>{cinema.title}</Text>
-                      <Text style={styles.cinemaDistance}>
-                        📏 Cach ban: {cinema.distance ? cinema.distance.toFixed(2) : '?'} km
-                      </Text>
+                      <View style={styles.distanceRow}>
+                        <Ionicons name="location" size={14} color={colors.accent} />
+                        <Text style={styles.cinemaDistance}>
+                          {cinema.distance ? cinema.distance.toFixed(2) : '?'} km
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.mapIcon}>🗺️</Text>
+                    <View style={styles.cardBadge}>
+                      <Ionicons name="map" size={20} color={colors.primary} />
+                    </View>
                   </View>
-                  
+
+                  {/* Card Details */}
+                  <View style={styles.divider} />
+
                   <View style={styles.cinemaDetails}>
-                    <Text style={styles.cinemaAddress}>
-                      📍 {cinema.address}
-                    </Text>
-                    
+                    {/* Address */}
+                    <View style={styles.detailRow}>
+                      <Ionicons name="location-sharp" size={16} color={colors.primary} />
+                      <Text style={styles.detailText}>{cinema.address}</Text>
+                    </View>
+
+                    {/* Phone */}
                     {cinema.phone && (
-                      <TouchableOpacity onPress={() => callPhone(cinema.phone)}>
-                        <Text style={[styles.cinemaDetail, styles.clickableText]}>
-                          📞 {cinema.phone} (Nhan de goi)
+                      <TouchableOpacity
+                        style={styles.detailRow}
+                        onPress={() => callPhone(cinema.phone)}
+                      >
+                        <Ionicons name="call" size={16} color={colors.accent} />
+                        <Text style={[styles.detailText, styles.clickableText]}>
+                          {cinema.phone}
                         </Text>
                       </TouchableOpacity>
                     )}
-                    
+
+                    {/* Facilities */}
                     {cinema.facilities && (
-                      <Text style={styles.cinemaDetail}>
-                        🎬 Tien ich: {cinema.facilities}
-                      </Text>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="star" size={16} color={colors.accent} />
+                        <Text style={styles.detailText}>{cinema.facilities}</Text>
+                      </View>
                     )}
-                    
+
+                    {/* Screens */}
                     {cinema.totalScreens && (
-                      <Text style={styles.cinemaDetail}>
-                        🎭 So phong chieu: {cinema.totalScreens}
-                      </Text>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="film" size={16} color={colors.primary} />
+                        <Text style={styles.detailText}>{cinema.totalScreens} phòng chiếu</Text>
+                      </View>
                     )}
-                    
+
+                    {/* Hours */}
                     {cinema.openingHours && (
-                      <Text style={styles.cinemaDetail}>
-                        🕒 Gio mo cua: {cinema.openingHours}
-                      </Text>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={16} color={colors.accent} />
+                        <Text style={styles.detailText}>{cinema.openingHours}</Text>
+                      </View>
                     )}
-                    
+
+                    {/* Website */}
                     {cinema.website && (
-                      <TouchableOpacity onPress={() => openWebsite(cinema.website)}>
-                        <Text style={[styles.cinemaDetail, styles.clickableText]}>
-                          🌐 Website (Nhan de mo)
+                      <TouchableOpacity
+                        style={styles.detailRow}
+                        onPress={() => openWebsite(cinema.website)}
+                      >
+                        <Ionicons name="globe" size={16} color={colors.primary} />
+                        <Text style={[styles.detailText, styles.clickableText]}>
+                          Website
                         </Text>
                       </TouchableOpacity>
                     )}
-                    
-                    <Text style={styles.tapHint}>
-                      Nhan card de xem chi duong tren Google Maps
-                    </Text>
                   </View>
+
+                  {/* Tap Hint */}
+                  <Text style={styles.tapHint}>
+                    Tap để xem chỉ đường trên Google Maps
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
       )}
-      
-      <View style={{ height: 30 }} />
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff' 
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
+
+  // ==================== HEADER ====================
   header: {
-    padding: 16,
+    paddingHorizontal: 16,
     paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: "700", 
-    marginBottom: 8, 
-    textAlign: "center", 
-    color: colors.primary 
+
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  locationWarning: {
+
+  headerSubtitle: {
     fontSize: 13,
-    textAlign: "center",
-    marginTop: 8,
-    color: "#FF9800",
-    fontWeight: "600",
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
+
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+  },
+
+  locationWarningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+
+  locationWarning: {
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  // ==================== MAP CONTAINER ====================
   mapContainer: {
-    height: 300,
+    height: 340,
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginVertical: 16,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 2,
     borderColor: colors.primary,
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
+
   map: {
     flex: 1,
     width: "100%",
     height: "100%",
   },
-  buttonGroup: { 
-    paddingHorizontal: 24,
-    marginTop: 10 
+
+  searchButton: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    left: 16,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    elevation: 5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
   },
+
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // ==================== LOADING STATE ====================
   loadingContainer: {
-    padding: 40,
+    paddingVertical: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.textSecondary,
-  },
-  resultsContainer: {
-    padding: 16,
-  },
-  cinemaListContainer: {
-    marginTop: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
+    letterSpacing: 0.3,
   },
+
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+
+  // ==================== RESULTS CONTAINER ====================
+  resultsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+
+  cinemaListContainer: {
+    marginTop: 8,
+  },
+
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+    paddingHorizontal: 12,
+  },
+
+  resultTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+
+  resultSubtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+
+  // ==================== CINEMA CARD ====================
   cinemaCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 4,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 4,
   },
+
   cinemaHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
-  cinemaNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.primary,
+
+  cinemaRankContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
-    minWidth: 35,
-    textAlign: 'center',
+    elevation: 3,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
+
+  cinemaRank: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
   cinemaMainInfo: {
     flex: 1,
   },
+
   cinemaTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 6,
-    lineHeight: 24,
-  },
-  cinemaDistance: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF6B6B',
-    backgroundColor: '#FFE5E5',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  cinemaDetails: {
-    marginTop: 8,
-  },
-  cinemaAddress: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 8,
-    lineHeight: 20,
+    letterSpacing: 0.2,
   },
-  cinemaDetail: {
+
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 184, 28, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+
+  cinemaDistance: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+
+  cardBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginBottom: 12,
+  },
+
+  cinemaDetails: {
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  detailText: {
     fontSize: 13,
     color: colors.textSecondary,
-    marginBottom: 6,
-    lineHeight: 18,
+    fontWeight: '600',
+    flex: 1,
   },
-  mapIcon: {
-    fontSize: 28,
-    marginLeft: 8,
-  },
+
   clickableText: {
     color: colors.primary,
     textDecorationLine: 'underline',
-    fontWeight: '600',
+    fontWeight: '700',
   },
+
   tapHint: {
     fontSize: 12,
-    color: colors.primary,
+    color: colors.textTertiary,
     fontStyle: 'italic',
-    marginTop: 8,
     textAlign: 'center',
     fontWeight: '500',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
 });
+
