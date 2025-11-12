@@ -50,6 +50,9 @@ import { dropShowtimesTable, seedDefaultShowtimes } from "./src/database/showtim
 import { deleteAllMovies, deleteTableCinemas, resetAndSeedCinemas, seedCinemasCanTho } from "./src/database/db";
 import ReviewListScreen from "./src/screens/ReviewListScreen";
 import { deleteAllSeats, generateDefaultSeats, seedDefaultSeats, seedSeats } from "./src/database/seatDB";
+import TicketScreen from "./src/screens/TicketScreen";
+import TicketDetailScreen from "./src/screens/TicketDetailScreen";
+import QRScannerScreen from "./src/screens/QRScannerScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -610,6 +613,11 @@ function UserTabs({ userId, email }) {
         options={{ title: "Wishlist" }}
       />
       <Tab.Screen
+        name="TicketsTab"
+        component={TicketScreen}
+        options={{ title: "Tickets", headerShown: true }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         initialParams={{ userId, email }}
@@ -660,6 +668,21 @@ function AppNavigator() {
       <Stack.Screen name="MainTabs">
         {() => (user.role === "admin" ? <AdminTabs /> : <UserTabs />)}
       </Stack.Screen>
+      <Stack.Screen
+        name="Tickets"
+        component={TicketScreen}
+        options={{ title: 'Vé của tôi', headerShown: true }}
+      />
+      <Stack.Screen
+        name="TicketDetail"
+        component={TicketDetailScreen}
+        options={{ title: 'Chi tiết vé' }}
+      />
+      <Stack.Screen
+        name="QRScanner"
+        component={QRScannerScreen}
+        options={{ title: 'Quét mã QR' }}
+      />
       <Stack.Screen
         name="UpdateProfile"
         component={UpdateProfileScreen}
