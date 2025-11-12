@@ -550,6 +550,13 @@ const MovieDetailScreen = ({ route, navigation }) => {
                   <Ionicons name="trash" size={20} color="#FFFFFF" />
                   <Text style={styles.actionButtonText}>Delete</Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: '#9C27B0' }]}
+                  onPress={() => navigation.navigate('ReviewList', { movieId: movie.id })}
+                >
+                  <Ionicons name="chatbubbles" size={20} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Review</Text>
+                </TouchableOpacity>
               </View>
             )}
 
