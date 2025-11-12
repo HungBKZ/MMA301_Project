@@ -5,9 +5,10 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    FlatList,
+    ActivityIndicator,
 } from "react-native";
 import { colors, commonStyles } from "../styles/commonStyles";
+import { Ionicons } from "@expo/vector-icons";
 import { getAllCinemas, getCinemaById } from "../database/db";
 import { getAllShowtimes, getShowtimesByMovieId, getShowtimesByRoomId, ensureShowtimesSeeded } from "../database/showtimeDB";
 import { getRoomById } from "../database/roomDB";
@@ -43,13 +44,10 @@ export default function ShowtimeScreen({ route, navigation }) {
     const [selectedIso, setSelectedIso] = useState(days[0].iso);
     const [cinemas, setCinemas] = useState([]);
     const [showtimes, setShowtimes] = useState([]);
-    // Cache để tránh query lặp lại
+    const [loading, setLoading] = useState(false);
     const roomSeatCountCache = {};
 
     useEffect(() => {
-        // Load cinemas and showtimes for this movie
-        console.log('Route params:', route.params);
-        console.log('movieId used:', movieId);
         try {
             const c = getAllCinemas();
             setCinemas(c);
@@ -59,29 +57,24 @@ export default function ShowtimeScreen({ route, navigation }) {
     }, [movieId]);
 
     useEffect(() => {
-        // Load showtimes for the provided movieId and enrich with cinema/room info
         if (!movieId) {
             setShowtimes([]);
             return;
         }
 
+        setLoading(true);
         try {
-            // Đảm bảo bảng showtimes đã được seed (idempotent)
             ensureShowtimesSeeded();
             const raw = getShowtimesByMovieId(movieId);
-            // console.log('Fetched showtimes for movieId', movieId, raw);
-            // Use the currently loaded cinemas (or fetch them if empty)
             const allCinemas = cinemas && cinemas.length ? cinemas : getAllCinemas();
 
             const enriched = raw.map((st) => {
-                // Parse start & end
                 const startParts = (st.start_time || '').split(' ');
                 const endParts = (st.end_time || '').split(' ');
                 const show_date = startParts[0] || '';
                 const show_time = (startParts[1] || '').slice(0, 5);
                 const show_end_time = (endParts[1] || '').slice(0, 5);
 
-                // Cinema info
                 let cinemaName = 'Unknown Cinema';
                 let cinemaAddress = '';
                 let cinemaId = null;
@@ -95,11 +88,8 @@ export default function ShowtimeScreen({ route, navigation }) {
                             cinemaAddress = cm.address || '';
                         }
                     }
-                } catch (e) {
-                    // ignore
-                }
+                } catch (e) { }
 
-                // Seats total (room-level)
                 let totalSeats = 0;
                 try {
                     if (!roomSeatCountCache[st.room_id]) {
@@ -108,12 +98,12 @@ export default function ShowtimeScreen({ route, navigation }) {
                     totalSeats = roomSeatCountCache[st.room_id] || 0;
                 } catch (e) { totalSeats = 0; }
 
-                // Reserved seats (tickets with status PAID or HELD for this showtime)
                 let reservedSeats = 0;
                 try {
                     const tickets = getTicketsByShowtimeId(st.id) || [];
                     reservedSeats = tickets.filter(t => ['PAID', 'HELD'].includes(t.status)).length;
                 } catch (e) { reservedSeats = 0; }
+
                 const availableSeats = Math.max(totalSeats - reservedSeats, 0);
                 const seat_available_text = `${availableSeats}/${totalSeats}`;
 
@@ -136,6 +126,8 @@ export default function ShowtimeScreen({ route, navigation }) {
         } catch (error) {
             console.error('❌ Error loading showtimes for movie', movieId, error);
             setShowtimes([]);
+        } finally {
+            setLoading(false);
         }
     }, [movieId, cinemas]);
 
@@ -150,142 +142,489 @@ export default function ShowtimeScreen({ route, navigation }) {
         return map;
     };
 
+    const getSeatStatusColor = (available, total) => {
+        if (total === 0) return { bg: colors.error, text: '#FFFFFF', label: 'Hết vé' };
+        const ratio = available / total;
+        if (ratio === 0) return { bg: colors.error, text: '#FFFFFF', label: 'Hết vé' };
+        if (ratio <= 0.2) return { bg: colors.error, text: '#FFFFFF', label: 'Sắp hết' };
+        if (ratio <= 0.4) return { bg: colors.warning, text: '#000000', label: 'Còn ít' };
+        if (ratio <= 0.7) return { bg: colors.accent, text: '#000000', label: 'Còn' };
+        return { bg: colors.success, text: '#FFFFFF', label: 'Còn nhiều' };
+    };
+
     return (
         <View style={[commonStyles.container, styles.container]}>
-            <Text style={styles.headerTitle}>{movieTitle || "Showtimes"}</Text>
-
-            {/* Extra info: movie id + selected date */}
-            <View style={styles.infoRow}>
-                <Text style={styles.infoText}>Movie ID: {movieId ?? 'N/A'}</Text>
-                <Text style={styles.infoDivider}>•</Text>
-                <Text style={styles.infoText}>Date: {selectedIso}</Text>
+            {/* ==================== HEADER ==================== */}
+            <View style={styles.headerContainer}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.headerSubtitle}>Chọn suất chiếu</Text>
+                    <Text style={styles.headerTitle} numberOfLines={1}>{movieTitle || "Showtimes"}</Text>
+                </View>
             </View>
 
-            {/* 7-day horizontal picker */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daysRow} contentContainerStyle={{ paddingHorizontal: 8 }}>
-                {days.map((d) => (
+            {/* ==================== DATE INFO ==================== */}
+            <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                    <Ionicons name="calendar" size={16} color={colors.accent} />
+                    <Text style={styles.infoText}>Ngày chiếu: <Text style={{ fontWeight: '700', color: colors.accent }}>{selectedIso}</Text></Text>
+                </View>
+            </View>
+
+            {/* ==================== 7-DAY DATE PICKER ==================== */}
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.daysRow}
+                contentContainerStyle={styles.daysRowContent}
+                scrollEventThrottle={16}
+            >
+                {days.map((d, idx) => (
                     <TouchableOpacity
                         key={d.iso}
-                        style={[styles.dayItem, selectedIso === d.iso ? styles.dayItemActive : null]}
+                        style={[
+                            styles.dayItem,
+                            selectedIso === d.iso && styles.dayItemActive,
+                            idx === days.length - 1 && { marginRight: 8 }
+                        ]}
                         onPress={() => setSelectedIso(d.iso)}
                         activeOpacity={0.8}
                     >
-                        <Text style={[styles.dayLabel, selectedIso === d.iso ? styles.dayLabelActive : null]}>{d.label}</Text>
-                        <View style={[styles.dayBubble, selectedIso === d.iso ? styles.dayBubbleActive : null]}>
-                            <Text style={[styles.dayNumber, selectedIso === d.iso ? styles.dayNumberActive : null]}>{d.day}</Text>
+                        <Text style={[
+                            styles.dayLabel,
+                            selectedIso === d.iso && styles.dayLabelActive
+                        ]}>
+                            {d.label}
+                        </Text>
+                        <View style={[
+                            styles.dayBubble,
+                            selectedIso === d.iso && styles.dayBubbleActive
+                        ]}>
+                            <Text style={[
+                                styles.dayNumber,
+                                selectedIso === d.iso && styles.dayNumberActive
+                            ]}>
+                                {d.day}
+                            </Text>
                         </View>
                     </TouchableOpacity>
                 ))}
             </ScrollView>
 
-            {/* Showtimes grouped by cinema */}
-            <ScrollView style={styles.list}>
-                {(() => {
-                    const grouped = groupedByCinemaForDate(selectedIso);
-                    const cinemaIds = Object.keys(grouped);
-                    if (cinemaIds.length === 0) {
-                        return (
-                            <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>No showtimes for this movie on this date.</Text>
-                            </View>
-                        );
-                    }
+            {/* ==================== SHOWTIMES LIST ==================== */}
+            {loading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.loadingText}>Đang tải suất chiếu...</Text>
+                </View>
+            ) : (
+                <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+                    {(() => {
+                        const grouped = groupedByCinemaForDate(selectedIso);
+                        const cinemaIds = Object.keys(grouped);
 
-                    return cinemaIds.map((cid) => {
-                        const group = grouped[cid];
-                        return (
-                            <View key={cid} style={styles.cinemaCard}>
-                                <View style={styles.cinemaHeader}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.cinemaName}>{group.cinema}</Text>
-                                        {group.showtimes[0]?.cinema_address ? (
-                                            <Text style={styles.cinemaAddress}>{group.showtimes[0].cinema_address}</Text>
-                                        ) : null}
-                                    </View>
+                        if (cinemaIds.length === 0) {
+                            return (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="film-outline" size={56} color={colors.textSecondary} />
+                                    <Text style={styles.emptyTitle}>Không có suất chiếu</Text>
+                                    <Text style={styles.emptyText}>Vui lòng chọn ngày khác</Text>
                                 </View>
-                                <View style={styles.timesRow}>
-                                    {group.showtimes.map((st) => {
-                                        const ratio = st.total_seats ? st.available_seats / st.total_seats : 0;
-                                        let badgeBg = colors.success;
-                                        let badgeText = '#fff';
-                                        if (ratio === 0) { badgeBg = colors.error; badgeText = '#fff'; }
-                                        else if (ratio <= 0.3) { badgeBg = colors.accent; badgeText = '#fff'; }
-                                        else if (ratio <= 0.6) { badgeBg = colors.warning; badgeText = colors.textPrimary; }
+                            );
+                        }
 
-                                        return (
-                                            <TouchableOpacity
-                                                key={st.id}
-                                                style={styles.timeButton}
-                                                activeOpacity={0.9}
-                                                onPress={() => {
-                                                    // Navigate to seat map for this showtime/room
-                                                    try {
-                                                        navigation.navigate('RoomMap', {
-                                                            showtimeId: st.id,
-                                                            roomId: st.room_id,
-                                                            movieId: st.movie_id,
-                                                            movieTitle,
-                                                            startTime: st.start_time,
-                                                            endTime: st.end_time,
-                                                            basePrice: st.base_price,
-                                                            cinemaName: st.cinema_name,
-                                                        });
-                                                    } catch (e) {
-                                                        console.log('Navigation to RoomMap failed:', e);
-                                                    }
-                                                }}
-                                            >
-                                                <View style={styles.timeHeaderRow}>
-                                                    <Text style={styles.timeText}>{st.show_time} - {st.show_end_time}</Text>
-                                                    <View style={[styles.seatBadge, { backgroundColor: badgeBg }]}>
-                                                        <Text style={[styles.seatBadgeText, { color: badgeText }]}>
+                        return cinemaIds.map((cid) => {
+                            const group = grouped[cid];
+                            return (
+                                <View key={cid} style={styles.cinemaCard}>
+                                    {/* Cinema Header */}
+                                    <View style={styles.cinemaHeader}>
+                                        <View style={styles.cinemaIconContainer}>
+                                            <Ionicons name="building" size={24} color={colors.accent} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.cinemaName}>{group.cinema}</Text>
+                                            {group.showtimes[0]?.cinema_address ? (
+                                                <View style={styles.cinemaAddressRow}>
+                                                    <Ionicons name="location-sharp" size={12} color={colors.textSecondary} />
+                                                    <Text style={styles.cinemaAddress}>{group.showtimes[0].cinema_address}</Text>
+                                                </View>
+                                            ) : null}
+                                        </View>
+                                    </View>
+
+                                    {/* Showtimes Grid */}
+                                    <View style={styles.timesGrid}>
+                                        {group.showtimes.map((st) => {
+                                            const seatStatus = getSeatStatusColor(st.available_seats, st.total_seats);
+                                            const isFull = st.available_seats === 0;
+
+                                            return (
+                                                <TouchableOpacity
+                                                    key={st.id}
+                                                    style={[
+                                                        styles.timeButton,
+                                                        isFull && styles.timeButtonDisabled
+                                                    ]}
+                                                    activeOpacity={isFull ? 1 : 0.85}
+                                                    onPress={() => {
+                                                        if (!isFull) {
+                                                            try {
+                                                                navigation.navigate('RoomMap', {
+                                                                    showtimeId: st.id,
+                                                                    roomId: st.room_id,
+                                                                    movieId: st.movie_id,
+                                                                    movieTitle,
+                                                                    startTime: st.start_time,
+                                                                    endTime: st.end_time,
+                                                                    basePrice: st.base_price,
+                                                                    cinemaName: st.cinema_name,
+                                                                });
+                                                            } catch (e) {
+                                                                console.log('Navigation to RoomMap failed:', e);
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* Time */}
+                                                    <View style={styles.timeContent}>
+                                                        <Ionicons name="time" size={18} color={colors.primary} />
+                                                        <Text style={styles.timeText}>
+                                                            {st.show_time}
+                                                        </Text>
+                                                    </View>
+
+                                                    {/* Duration */}
+                                                    <Text style={styles.durationText}>
+                                                        ~{Math.round((new Date(`2024-01-01 ${st.show_end_time}`) - new Date(`2024-01-01 ${st.show_time}`)) / 60000)} phút
+                                                    </Text>
+
+                                                    {/* Seat Badge */}
+                                                    <View style={[
+                                                        styles.seatBadge,
+                                                        { backgroundColor: seatStatus.bg }
+                                                    ]}>
+                                                        <Ionicons
+                                                            name={st.available_seats > 0 ? "checkmark-circle" : "close-circle"}
+                                                            size={12}
+                                                            color={seatStatus.text}
+                                                            style={{ marginRight: 4 }}
+                                                        />
+                                                        <Text style={[
+                                                            styles.seatBadgeText,
+                                                            { color: seatStatus.text }
+                                                        ]}>
                                                             {st.available_seats}/{st.total_seats}
                                                         </Text>
                                                     </View>
-                                                </View>
-                                                <Text style={styles.timeSubText}>Ghế trống</Text>
-                                                {/* <Text style={styles.timeMetaText}>{st.show_date}</Text> */}
-                                            </TouchableOpacity>
-                                        );
-                                    })}
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
                                 </View>
-                            </View>
-                        );
-                    });
-                })()}
-            </ScrollView>
+                            );
+                        });
+                    })()}
+
+                    <View style={{ height: 20 }} />
+                </ScrollView>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 12 },
-    headerTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12, color: colors.textPrimary },
-    infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-    infoText: { color: colors.textSecondary, fontSize: 12 },
-    infoDivider: { marginHorizontal: 8, color: colors.textSecondary },
-    daysRow: { marginBottom: 12 },
-    dayItem: { alignItems: "center", marginHorizontal: 8 },
-    dayLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
-    dayLabelActive: { color: colors.primary, fontWeight: "600" },
-    dayBubble: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.surface, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: colors.border },
-    dayBubbleActive: { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 },
-    dayNumber: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
-    dayNumberActive: { color: "#fff" },
+    container: {
+        padding: 12,
+    },
+
+    // ==================== HEADER ====================
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        marginBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        gap: 12,
+    },
+
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    headerSubtitle: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.2,
+        marginBottom: 4,
+    },
+
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        letterSpacing: 0.3,
+    },
+
+    // ==================== INFO CARD ====================
+    infoCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+
+    infoText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        fontWeight: '600',
+    },
+
+    // ==================== DAYS ROW ====================
+    daysRow: {
+        marginBottom: 14,
+    },
+
+    daysRowContent: {
+        paddingHorizontal: 8,
+        gap: 8,
+    },
+
+    dayItem: {
+        alignItems: 'center',
+        paddingHorizontal: 8,
+    },
+
+    dayLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        marginBottom: 6,
+        textTransform: 'uppercase',
+        letterSpacing: 0.1,
+    },
+
+    dayLabelActive: {
+        color: colors.primary,
+    },
+
+    dayBubble: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.border,
+    },
+
+    dayBubbleActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+        elevation: 4,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+    },
+
+    dayNumber: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: colors.textPrimary,
+    },
+
+    dayNumberActive: {
+        color: '#FFFFFF',
+    },
+
     dayItemActive: {},
-    list: { marginTop: 8 },
-    cinemaCard: { backgroundColor: colors.surface, padding: 14, borderRadius: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.border, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 2 },
-    cinemaHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-    cinemaName: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
-    cinemaAddress: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-    timesRow: { flexDirection: "row", flexWrap: "wrap" },
-    timeButton: { backgroundColor: colors.primaryLight, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, marginRight: 10, marginBottom: 10, borderWidth: 1, borderColor: colors.border, shadowColor: colors.primary, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1, minWidth: 140 },
-    timeHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    timeText: { color: colors.textPrimary, fontWeight: "700", fontSize: 14 },
-    timeSubText: { color: colors.textSecondary, fontSize: 11 },
-    timeMetaText: { color: colors.textSecondary, fontSize: 10 },
-    seatBadge: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 12, marginLeft: 8 },
-    seatBadgeText: { fontSize: 11, fontWeight: '700' },
-    emptyContainer: { padding: 24, alignItems: "center" },
-    emptyText: { color: colors.textSecondary },
+
+    // ==================== LIST ====================
+    list: {
+        flex: 1,
+        marginTop: 8,
+    },
+
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    loadingText: {
+        fontSize: 14,
+        color: colors.textPrimary,
+        marginTop: 12,
+        fontWeight: '600',
+    },
+
+    // ==================== CINEMA CARD ====================
+    cinemaCard: {
+        backgroundColor: colors.surface,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+        elevation: 3,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+    },
+
+    cinemaHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        gap: 10,
+    },
+
+    cinemaIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: colors.backgroundAlt,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    cinemaName: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        marginBottom: 4,
+        letterSpacing: 0.2,
+    },
+
+    cinemaAddressRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+
+    cinemaAddress: {
+        fontSize: 11,
+        color: colors.textSecondary,
+        fontWeight: '600',
+        flex: 1,
+    },
+
+    // ==================== TIMES GRID ====================
+    timesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+
+    timeButton: {
+        flex: 1,
+        minWidth: '45%',
+        backgroundColor: colors.backgroundAlt,
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        elevation: 2,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
+
+    timeButtonDisabled: {
+        opacity: 0.5,
+        borderColor: colors.error,
+    },
+
+    timeContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+
+    timeText: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        letterSpacing: 0.2,
+    },
+
+    durationText: {
+        fontSize: 11,
+        color: colors.textSecondary,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+
+    seatBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+    },
+
+    seatBadgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.1,
+    },
+
+    // ==================== EMPTY STATE ====================
+    emptyContainer: {
+        paddingVertical: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        marginTop: 16,
+        marginBottom: 8,
+        letterSpacing: 0.3,
+    },
+
+    emptyText: {
+        fontSize: 13,
+        color: colors.textSecondary,
+        fontWeight: '600',
+    },
 });
+

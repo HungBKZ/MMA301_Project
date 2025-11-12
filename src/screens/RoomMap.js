@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { colors, commonStyles } from "../styles/commonStyles";
+import { Ionicons } from "@expo/vector-icons";
 import { getSeatsByRoom } from "../database/seatDB";
 import { getTicketsByShowtimeId } from "../database/ticketDB";
 
@@ -9,53 +10,88 @@ const Seat = ({ seat, reserved, selected, onPress }) => {
     let bg = colors.surface;
     let border = colors.border;
     let text = colors.textPrimary;
+    let icon = null;
 
     if (reserved) {
-        bg = "#E9ECEF"; // disabled gray
-        text = "#98A2B3";
-        border = "#D0D5DD";
+        bg = colors.textTertiary;
+        border = colors.textSecondary;
+        text = colors.textSecondary;
+        icon = "close";
     } else if (selected) {
-        bg = "#F8E0EC"; // pastel pink
-        border = "#F48FB1";
-        text = colors.textPrimary;
+        bg = colors.primary;
+        border = colors.primary;
+        text = "#FFFFFF";
+        icon = "checkmark";
     } else if (seat.seat_type === "VIP") {
-        bg = "#FFF3E0"; // soft orange bg
+        bg = colors.accent;
         border = colors.accent;
+        text = "#000000";
+        icon = "star";
     } else if (seat.seat_type === "COUPLE") {
-        bg = "#EDE7F6"; // soft purple
-        border = "#B39DDB";
+        bg = "rgba(211, 47, 47, 0.2)";
+        border = colors.primary;
+        icon = "heart";
     }
 
     return (
         <TouchableOpacity
             activeOpacity={reserved ? 1 : 0.8}
             onPress={reserved ? undefined : onPress}
-            style={[styles.seat, { backgroundColor: bg, borderColor: border, opacity: reserved ? 0.7 : 1 }]}
+            style={[
+                styles.seat,
+                {
+                    backgroundColor: bg,
+                    borderColor: border,
+                    opacity: reserved ? 0.6 : 1,
+                },
+            ]}
         >
-            <Text style={[styles.seatText, { color: text }]}>{seat.row_label}{seat.seat_number}</Text>
+            {icon ? (
+                <Ionicons name={icon} size={16} color={text} />
+            ) : (
+                <Text style={[styles.seatText, { color: text }]}>
+                    {seat.row_label}{seat.seat_number}
+                </Text>
+            )}
         </TouchableOpacity>
     );
 };
 
-// Couple seat (double width) representing two adjacent seats
+// Couple seat (double width)
 const CoupleSeat = ({ seats, reserved, selected, onPress }) => {
-    // seats is an array of two seat objects [left, right]
-    let bg = "#EDE7F6";
-    let border = "#B39DDB";
+    let bg = "rgba(211, 47, 47, 0.2)";
+    let border = colors.primary;
     let text = colors.textPrimary;
+
     if (reserved) {
-        bg = "#E9ECEF"; border = "#D0D5DD"; text = "#98A2B3";
+        bg = colors.textTertiary;
+        border = colors.textSecondary;
+        text = colors.textSecondary;
     } else if (selected) {
-        bg = "#F8E0EC"; border = "#F48FB1";
+        bg = colors.primary;
+        border = colors.primary;
+        text = "#FFFFFF";
     }
+
     const label = `${seats[0].row_label}${seats[0].seat_number}-${seats[1].seat_number}`;
+
     return (
         <TouchableOpacity
             activeOpacity={reserved ? 1 : 0.8}
             onPress={reserved ? undefined : onPress}
-            style={[styles.coupleSeat, { backgroundColor: bg, borderColor: border, opacity: reserved ? 0.7 : 1 }]}
+            style={[
+                styles.coupleSeat,
+                {
+                    backgroundColor: bg,
+                    borderColor: border,
+                    opacity: reserved ? 0.6 : 1,
+                },
+            ]}
         >
-            <Text style={[styles.seatText, { color: text }]}>{label}</Text>
+            <Ionicons name={selected ? "heart" : "heart-outline"} size={18} color={text} />
+            <Text style={[styles.seatText, { color: text, marginLeft: 4 }]}>
+                {label}
+            </Text>
         </TouchableOpacity>
     );
 };
@@ -87,9 +123,9 @@ export default function RoomMap({ route, navigation }) {
                 .filter(t => {
                     if (t.status === 'PAID') return true;
                     if (t.status === 'HELD') {
-                        if (!t.hold_expires_at) return true; // conservative
+                        if (!t.hold_expires_at) return true;
                         const exp = new Date((t.hold_expires_at || '').replace(' ', 'T'));
-                        return exp > now; // only block if hold still valid
+                        return exp > now;
                     }
                     return false;
                 })
@@ -106,9 +142,7 @@ export default function RoomMap({ route, navigation }) {
             if (!map[s.row_label]) map[s.row_label] = [];
             map[s.row_label].push(s);
         });
-        // ensure stable ordering by seat_number
         Object.values(map).forEach(arr => arr.sort((a, b) => a.seat_number - b.seat_number));
-        // order rows alphabetically A..Z
         return Object.keys(map).sort().map(label => ({ label, items: map[label] }));
     }, [seats]);
 
@@ -132,7 +166,6 @@ export default function RoomMap({ route, navigation }) {
         let totalPrice = 0;
         const selSet = selectedOverride || selectedSet;
 
-        // Build rows for couple pairing logic
         const byRow = seats.reduce((acc, s) => {
             acc[s.row_label] = acc[s.row_label] || [];
             acc[s.row_label].push(s);
@@ -140,7 +173,6 @@ export default function RoomMap({ route, navigation }) {
         }, {});
         Object.values(byRow).forEach(arr => arr.sort((a, b) => a.seat_number - b.seat_number));
 
-        // Iterate each row
         for (const label of Object.keys(byRow)) {
             const arr = byRow[label];
             for (let i = 0; i < arr.length; i++) {
@@ -151,10 +183,9 @@ export default function RoomMap({ route, navigation }) {
                     if (bothSelected) {
                         totalSeats += 2;
                         totalPrice += effectiveBase * 2 * (priceCfg.COUPLE || 1);
-                        i = arr.indexOf(next); // skip next
+                        i = arr.indexOf(next);
                         continue;
                     }
-                    // If not both selected, ignore partial (shouldn't occur with current UI)
                 }
                 if (selSet.has(s.id)) {
                     totalSeats += 1;
@@ -166,23 +197,18 @@ export default function RoomMap({ route, navigation }) {
         return { totalSeats, totalPrice };
     };
 
-    // Validate selection rules:
-    // - No single empty seat between two taken seats (taken = reserved or selected)
-    // - No single empty seat left at either row edge next to a taken seat
-    // - Max 6 seats can be selected per booking
     const validateSelection = (selSet) => {
-        // Max seats
         const totals = computeTotals(selSet);
         if (totals.totalSeats > 6) {
             return { ok: false, reason: 'Bạn chỉ được đặt tối đa 6 ghế mỗi lần.' };
         }
 
-        // Build status per row
         const byRow = seats.reduce((acc, s) => {
             acc[s.row_label] = acc[s.row_label] || [];
             acc[s.row_label].push(s);
             return acc;
         }, {});
+
         for (const label of Object.keys(byRow)) {
             const arr = byRow[label].slice().sort((a, b) => a.seat_number - b.seat_number);
             const status = arr.map(s => {
@@ -194,15 +220,12 @@ export default function RoomMap({ route, navigation }) {
             const n = status.length;
             const taken = (v) => v === 'RES' || v === 'SEL';
 
-            // Left edge: cannot leave exactly one FREE at the start followed by taken
             if (n >= 2 && status[0] === 'FREE' && taken(status[1])) {
                 return { ok: false, reason: 'Không được chừa trống 1 ghế ở đầu hàng.' };
             }
-            // Right edge
             if (n >= 2 && status[n - 1] === 'FREE' && taken(status[n - 2])) {
                 return { ok: false, reason: 'Không được chừa trống 1 ghế ở cuối hàng.' };
             }
-            // Middle single gaps
             for (let i = 1; i < n - 1; i++) {
                 if (status[i] === 'FREE' && taken(status[i - 1]) && taken(status[i + 1])) {
                     return { ok: false, reason: 'Không được để trống 1 ghế giữa 2 ghế đã chọn/đã đặt.' };
@@ -215,14 +238,15 @@ export default function RoomMap({ route, navigation }) {
     const toggleSeat = (seat) => {
         if (reservedSet.has(seat.id)) return;
         const next = new Set(selectedSet);
-        if (next.has(seat.id)) next.delete(seat.id); else next.add(seat.id);
-        // Only enforce max seats here
+        if (next.has(seat.id)) next.delete(seat.id);
+        else next.add(seat.id);
+
         const totals = computeTotals(next);
         if (totals.totalSeats > 6) {
             Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
             return;
         }
-        // Validate selection rules immediately and prevent invalid picks
+
         const validation = validateSelection(next);
         if (!validation.ok) {
             Alert.alert('Không hợp lệ', validation.reason);
@@ -233,48 +257,86 @@ export default function RoomMap({ route, navigation }) {
 
     return (
         <View style={[commonStyles.container, styles.container]}>
-            <View style={styles.headerInfo}>
-                <Text style={styles.title}>{cinemaName || "Rạp"}</Text>
-                {!!movieTitle && <Text style={styles.subTitle}>{movieTitle}</Text>}
-                {!!startTime && <Text style={styles.subMeta}>{startTime}</Text>}
-                <Text style={styles.subMeta}>Phòng: {roomId} • Ghế trống {available}/{total}</Text>
+            {/* ==================== HEADER ==================== */}
+            <View style={styles.headerContainer}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="chevron-back" size={24} color={colors.primary} />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.headerSubtitle}>Chọn ghế</Text>
+                    <Text style={styles.headerTitle} numberOfLines={1}>{movieTitle || "Phim"}</Text>
+                </View>
+                <View style={styles.seatCountBadge}>
+                    <Ionicons name="seat" size={14} color={colors.accent} />
+                    <Text style={styles.seatCountText}>{available}</Text>
+                </View>
             </View>
 
+            {/* ==================== INFO CARD ==================== */}
+            <View style={styles.infoCard}>
+                <View style={styles.infoRow}>
+                    <Ionicons name="building" size={16} color={colors.accent} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.infoLabel}>Rạp</Text>
+                        <Text style={styles.infoValue}>{cinemaName || "Rạp"}</Text>
+                    </View>
+                </View>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoRow}>
+                    <Ionicons name="time" size={16} color={colors.accent} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.infoLabel}>Giờ chiếu</Text>
+                        <Text style={styles.infoValue}>{startTime || "N/A"}</Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* ==================== SCREEN ==================== */}
             <View style={styles.screenBox}>
+                <Text style={styles.screenLabel}>MÀN HÌNH</Text>
                 <View style={styles.screenBar} />
-                <Text style={styles.screenText}>MÀN HÌNH</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.mapContainer}>
+            {/* ==================== SEAT MAP ==================== */}
+            <ScrollView
+                contentContainerStyle={styles.mapContainer}
+                showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+            >
                 {rows.length === 0 ? (
-                    <View style={styles.empty}><Text style={{ color: colors.textSecondary }}>Không có dữ liệu ghế cho phòng này.</Text></View>
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
+                        <Text style={styles.emptyText}>Không có dữ liệu ghế cho phòng này.</Text>
+                    </View>
                 ) : (
                     rows.map(row => {
-                        // Prepare display units: couple pairs on row G -> (1,2) and (3,4) only
                         const units = [];
                         if (row.items.some(s => s.seat_type === 'COUPLE')) {
                             for (let i = 0; i < row.items.length; i++) {
                                 const s = row.items[i];
-                                // Pair any odd-even couple (1-2, 3-4, 5-6, ...)
                                 if (s.seat_type === 'COUPLE' && s.seat_number % 2 === 1) {
                                     const next = row.items.find(x => x.seat_number === s.seat_number + 1);
                                     if (next && next.seat_type === 'COUPLE') {
                                         units.push({ type: 'COUPLE', seats: [s, next], key: `cp-${s.id}-${next.id}` });
-                                        i = row.items.indexOf(next); // skip next in loop
+                                        i = row.items.indexOf(next);
                                         continue;
                                     }
                                 }
-                                // fallback single
                                 units.push({ type: 'SINGLE', seat: s, key: `s-${s.id}` });
                             }
                         } else {
-                            // Non-couple rows
                             row.items.forEach(s => units.push({ type: 'SINGLE', seat: s, key: `s-${s.id}` }));
                         }
 
                         return (
                             <View key={row.label} style={styles.row}>
-                                <Text style={styles.rowLabel}>{row.label}</Text>
+                                <View style={styles.rowLabelContainer}>
+                                    <Text style={styles.rowLabel}>{row.label}</Text>
+                                </View>
                                 <View style={styles.rowSeats}>
                                     {units.map(u => {
                                         if (u.type === 'COUPLE') {
@@ -294,13 +356,11 @@ export default function RoomMap({ route, navigation }) {
                                                         } else {
                                                             u.seats.forEach(x => next.add(x.id));
                                                         }
-                                                        // Enforce max seats
                                                         const totals = computeTotals(next);
                                                         if (totals.totalSeats > 6) {
                                                             Alert.alert('Giới hạn', 'Bạn chỉ được chọn tối đa 6 ghế.');
                                                             return;
                                                         }
-                                                        // Validate and prevent leaving single gaps
                                                         const validation = validateSelection(next);
                                                         if (!validation.ok) {
                                                             Alert.alert('Không hợp lệ', validation.reason);
@@ -329,22 +389,38 @@ export default function RoomMap({ route, navigation }) {
                 )}
             </ScrollView>
 
-            <View style={styles.legend}>
-                <LegendItem color="#E9ECEF" label="Đã đặt/giữ" />
-                <LegendItem color="#F8E0EC" borderColor="#F48FB1" label="Ghế bạn chọn" />
-                <LegendItem color="#FFFFFF" borderColor={colors.border} label="Ghế thường" />
-                <LegendItem color="#FFF3E0" borderColor={colors.accent} label="Ghế VIP" />
-                <LegendItem color="#EDE7F6" borderColor="#B39DDB" label="Ghế COUPLE" />
+            {/* ==================== LEGEND ==================== */}
+            <View style={styles.legendContainer}>
+                <LegendItem icon="close" color={colors.textTertiary} label="Đã đặt" />
+                <LegendItem icon="checkmark" color={colors.primary} label="Đã chọn" />
+                <LegendItem color={colors.surface} borderColor={colors.border} label="Thường" />
+                <LegendItem icon="star" color={colors.accent} label="VIP" />
+                <LegendItem icon="heart-outline" color={colors.primary} label="Couple" />
             </View>
 
+            {/* ==================== BOTTOM BAR ==================== */}
             <View style={styles.bottomBar}>
-                {(() => {
-                    const t = computeTotals(); return (
-                        <Text style={styles.bottomText}>Đang chọn: {t.totalSeats} • Tổng: {formatVND(t.totalPrice)}</Text>
-                    );
-                })()}
+                <View style={styles.totalContainer}>
+                    {(() => {
+                        const t = computeTotals();
+                        return (
+                            <>
+                                <View style={styles.totalItem}>
+                                    <Text style={styles.totalLabel}>Ghế chọn</Text>
+                                    <Text style={styles.totalValue}>{t.totalSeats}</Text>
+                                </View>
+                                <View style={styles.totalDivider} />
+                                <View style={styles.totalItem}>
+                                    <Text style={styles.totalLabel}>Tổng tiền</Text>
+                                    <Text style={styles.totalPrice}>{formatVND(t.totalPrice)}</Text>
+                                </View>
+                            </>
+                        );
+                    })()}
+                </View>
+
                 <TouchableOpacity
-                    style={[styles.continueBtn, { opacity: selectedSet.size ? 1 : 0.6 }]}
+                    style={[styles.continueBtn, { opacity: selectedSet.size ? 1 : 0.5 }]}
                     onPress={() => {
                         if (!selectedSet.size) return;
                         const validation = validateSelection(selectedSet);
@@ -353,7 +429,6 @@ export default function RoomMap({ route, navigation }) {
                             return;
                         }
                         const t = computeTotals();
-                        // Điều hướng sang màn Checkout kèm dữ liệu cần thiết
                         navigation.navigate('Checkout', {
                             showtimeId,
                             roomId,
@@ -365,67 +440,352 @@ export default function RoomMap({ route, navigation }) {
                             summary: { totalSeats: t.totalSeats, totalPrice: t.totalPrice },
                         });
                     }}
+                    disabled={!selectedSet.size}
+                    activeOpacity={0.85}
                 >
-                    <Text style={styles.continueText}>Tiếp tục</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                    <Text style={styles.continueText}>Thanh toán</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
 
-const LegendItem = ({ color, borderColor, label }) => (
+const LegendItem = ({ icon, color, borderColor, label }) => (
     <View style={styles.legendItem}>
-        <View style={[styles.legendSwatch, { backgroundColor: color, borderColor: borderColor || colors.border }]} />
-        <Text numberOfLines={2} style={styles.legendLabel}>{label}</Text>
+        {icon ? (
+            <View style={[styles.legendSwatch, { backgroundColor: color }]}>
+                <Ionicons name={icon} size={12} color="#FFFFFF" />
+            </View>
+        ) : (
+            <View style={[styles.legendSwatch, { backgroundColor: color, borderColor: borderColor || colors.border }]} />
+        )}
+        <Text numberOfLines={1} style={styles.legendLabel}>{label}</Text>
     </View>
 );
 
 const styles = StyleSheet.create({
-    container: { padding: 12 },
-    headerInfo: { marginBottom: 8 },
-    title: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
-    subTitle: { color: colors.textSecondary, marginTop: 2 },
-    subMeta: { color: colors.textSecondary, marginTop: 2, fontSize: 12 },
+    container: {
+        padding: 12,
+    },
 
-    screenBox: { alignItems: "center", marginTop: 6, marginBottom: 12 },
-    screenBar: { height: 6, marginTop: 40, width: "85%", backgroundColor: colors.primary, borderRadius: 6, opacity: 0.7 },
-    screenText: { marginTop: 6, fontWeight: "700", color: colors.textSecondary, letterSpacing: 2 },
+    // ==================== HEADER ====================
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        marginBottom: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        gap: 12,
+    },
 
-    mapContainer: { padding: 8, alignItems: 'center', marginTop: 16 },
-    empty: { padding: 24, alignItems: "center" },
-    row: { flexDirection: "row", alignItems: "center", justifyContent: 'center', marginBottom: 10, width: '100%' },
-    rowLabel: { width: 24, textAlign: "center", color: colors.textPrimary, fontWeight: "700" },
-    rowSeats: { flexDirection: "row", flexWrap: "nowrap", justifyContent: 'center', alignItems: 'center' },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: colors.surface,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    headerSubtitle: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+        marginBottom: 2,
+    },
+
+    headerTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        letterSpacing: 0.2,
+    },
+
+    seatCountBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.surface,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    seatCountText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: colors.accent,
+    },
+
+    // ==================== INFO CARD ====================
+    infoCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
+    infoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+
+    infoDivider: {
+        height: 1,
+        backgroundColor: colors.border,
+        marginVertical: 8,
+    },
+
+    infoLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.1,
+    },
+
+    infoValue: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        marginTop: 2,
+    },
+
+    // ==================== SCREEN ====================
+    screenBox: {
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginBottom: 12,
+    },
+
+    screenLabel: {
+        fontWeight: '800',
+        color: colors.textSecondary,
+        letterSpacing: 1,
+        fontSize: 11,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+    },
+
+    screenBar: {
+        height: 8,
+        width: '80%',
+        backgroundColor: colors.primary,
+        borderRadius: 8,
+        opacity: 0.8,
+        elevation: 3,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+
+    // ==================== MAP CONTAINER ====================
+    mapContainer: {
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        alignItems: 'center',
+        minHeight: 200,
+    },
+
+    emptyContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    emptyText: {
+        fontSize: 13,
+        color: colors.textSecondary,
+        marginTop: 12,
+        fontWeight: '600',
+    },
+
+    // ==================== SEAT ROWS ====================
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+        width: '100%',
+        gap: 8,
+    },
+
+    rowLabelContainer: {
+        width: 30,
+        alignItems: 'center',
+    },
+
+    rowLabel: {
+        textAlign: 'center',
+        color: colors.textPrimary,
+        fontWeight: '800',
+        fontSize: 12,
+    },
+
+    rowSeats: {
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 6,
+    },
+
     seat: {
-        width: 34,
-        height: 34,
+        width: 36,
+        height: 36,
         borderRadius: 8,
-        borderWidth: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: 6,
-        marginBottom: 8,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 2,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
+
     coupleSeat: {
-        width: 74, // 2 * 34 + 6 spacing
-        height: 34,
+        width: 80,
+        height: 36,
         borderRadius: 8,
-        borderWidth: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: 6,
-        marginBottom: 8,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        paddingHorizontal: 8,
+        elevation: 2,
+        shadowColor: colors.shadow,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
-    seatText: { fontSize: 11, fontWeight: "700" },
 
-    legend: { flexDirection: "row", flexWrap: 'wrap', alignItems: "center", justifyContent: 'center', gap: 12, paddingHorizontal: 8, marginBottom: 8 },
-    legendItem: { flexDirection: "row", alignItems: "center", marginHorizontal: 6, marginBottom: 6, maxWidth: '45%' },
-    legendSwatch: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, marginRight: 6 },
-    legendLabel: { color: colors.textSecondary, fontSize: 12, flexShrink: 1, flexWrap: 'wrap' },
+    seatText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
 
-    bottomBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 12, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderTopLeftRadius: 12, borderTopRightRadius: 12 },
-    bottomText: { color: colors.textPrimary, fontWeight: "600" },
-    continueBtn: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 18, borderRadius: 10 },
-    continueText: { color: "#fff", fontWeight: "700" },
+    // ==================== LEGEND ====================
+    legendContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+        backgroundColor: colors.surface,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+    },
+
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: '30%',
+    },
+
+    legendSwatch: {
+        width: 22,
+        height: 22,
+        borderRadius: 4,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    legendLabel: {
+        color: colors.textSecondary,
+        fontSize: 11,
+        fontWeight: '700',
+        flex: 1,
+    },
+
+    // ==================== BOTTOM BAR ====================
+    bottomBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+        backgroundColor: colors.surface,
+    },
+
+    totalContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
+    totalItem: {
+        alignItems: 'center',
+    },
+
+    totalLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 0.1,
+    },
+
+    totalValue: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: colors.textPrimary,
+        marginTop: 2,
+    },
+
+    totalPrice: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: colors.primary,
+        marginTop: 2,
+    },
+
+    totalDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: colors.border,
+        marginHorizontal: 12,
+    },
+
+    continueBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: colors.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 10,
+        elevation: 4,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+
+    continueText: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+        fontSize: 14,
+        letterSpacing: 0.2,
+    },
 });
-
