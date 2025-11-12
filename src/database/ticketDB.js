@@ -59,6 +59,28 @@ export const getTicketsByShowtimeId = (showtimeId) => {
     }
 };
 
+// Count tickets (any status) for a showtime
+export const getTicketCountByShowtimeId = (showtimeId) => {
+    try {
+        const row = db.getFirstSync("SELECT COUNT(*) AS count FROM tickets WHERE showtime_id = ?", [showtimeId]);
+        return row?.count ? Number(row.count) : 0;
+    } catch (error) {
+        console.error("❌ Error getTicketCountByShowtimeId:", error);
+        return 0;
+    }
+};
+
+// Whether showtime has any paid or held tickets (not cancelled)
+export const hasActiveTickets = (showtimeId) => {
+    try {
+        const row = db.getFirstSync("SELECT COUNT(*) AS count FROM tickets WHERE showtime_id = ? AND status IN ('HELD','PAID')", [showtimeId]);
+        return (row?.count || 0) > 0;
+    } catch (error) {
+        console.error("❌ Error hasActiveTickets:", error);
+        return false;
+    }
+};
+
 export const getTicketsByBookingId = (bookingId) => {
     try {
         return db.getAllSync("SELECT * FROM tickets WHERE booking_id = ? ORDER BY id", [bookingId]);
@@ -170,6 +192,8 @@ export default {
     getAllTickets,
     getTicketById,
     getTicketsByShowtimeId,
+    getTicketCountByShowtimeId,
+    hasActiveTickets,
     getTicketsByBookingId,
     addTicket,
     updateTicket,

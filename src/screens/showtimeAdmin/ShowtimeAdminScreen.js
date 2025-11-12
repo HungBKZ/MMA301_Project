@@ -2,7 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ScrollView } from 'react-native';
 import { colors, commonStyles } from '../../styles/commonStyles';
-import { getAllCinemas } from '../../database/db';
+import { getAllCinemas, getMovieById } from '../../database/db';
+import { hasActiveTickets } from '../../database/ticketDB';
 import { getRoomsByCinemaId } from '../../database/roomDB';
 import { getShowtimesByDate, deleteShowtime, getShowtimeById } from '../../database/showtimeDB';
 import ShowtimeFormModal from './ShowtimeFormModal';
@@ -14,6 +15,7 @@ export default function ShowtimeAdminScreen() {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [dateStr, setDateStr] = useState(() => new Date().toISOString().slice(0,10));
   const [showtimes, setShowtimes] = useState([]);
+  const [movieMap, setMovieMap] = useState({}); // { movie_id: title }
   const [modalVisible, setModalVisible] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
 
@@ -37,9 +39,17 @@ export default function ShowtimeAdminScreen() {
       if (!selectedCinema) return;
       const data = getShowtimesByDate(dateStr, selectedCinema.id) || [];
       setShowtimes(data);
+      // Build movie title map for displayed showtimes
+      const ids = Array.from(new Set(data.map(s => s.movie_id).filter(Boolean)));
+      const map = {};
+      ids.forEach(id => {
+        try { map[id] = getMovieById(id)?.title || `Phim #${id}`; } catch(e) { map[id] = `Phim #${id}`; }
+      });
+      setMovieMap(map);
     } catch (e) {
       console.log('Error load showtimes', e);
       setShowtimes([]);
+      setMovieMap({});
     }
   };
 
@@ -63,6 +73,12 @@ export default function ShowtimeAdminScreen() {
   }, [filteredByRoom]);
 
   const handleDelete = (id) => {
+    try {
+      if (hasActiveTickets(id)) {
+        Alert.alert('Không thể xóa', 'Suất chiếu đã có vé được giữ/mua. Vui lòng hủy vé trước khi xóa.');
+        return;
+      }
+    } catch (e) { /* ignore */ }
     Alert.alert('Xóa suất chiếu', 'Bạn chắc chắn muốn xóa?', [
       { text: 'Hủy', style: 'cancel' },
       { text: 'Xóa', style: 'destructive', onPress: () => {
@@ -82,7 +98,9 @@ export default function ShowtimeAdminScreen() {
   };
 
   const openEdit = (item) => {
-    setEditTarget(item);
+    // If has tickets, prevent date/time edit (will be enforced inside modal via prop)
+    const locked = hasActiveTickets(item.id);
+    setEditTarget({ ...item, _locked: locked });
     setModalVisible(true);
   };
 
@@ -95,22 +113,26 @@ export default function ShowtimeAdminScreen() {
     );
   };
 
-  const renderShowtime = ({ item }) => (
-    <View style={[styles.showtimeRow]}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.showtimeText}>{item.start_time} → {item.end_time}</Text>
-        <Text style={styles.showtimeMeta}>Phòng #{item.room_id} • Giá: {item.base_price?.toLocaleString?.() || item.base_price} • {item.status}</Text>
+  const renderShowtime = ({ item }) => {
+    const movieTitle = movieMap[item.movie_id] || `Phim #${item.movie_id}`;
+    return (
+      <View style={[styles.showtimeRow]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.showtimeMovie}>{movieTitle}</Text>
+          <Text style={styles.showtimeText}>{item.start_time} → {item.end_time}</Text>
+          <Text style={styles.showtimeMeta}>Phòng #{item.room_id} • Giá: {item.base_price?.toLocaleString?.() || item.base_price} • {item.status}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={[commonStyles.buttonOutline, { paddingHorizontal: 12 }]} onPress={() => openEdit(item)}>
+            <Text style={commonStyles.buttonText}>Sửa</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[commonStyles.button, { paddingHorizontal: 12 }]} onPress={() => handleDelete(item.id)}>
+            <Text style={commonStyles.buttonText}>Xóa</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <TouchableOpacity style={[commonStyles.buttonOutline, { paddingHorizontal: 12 }]} onPress={() => openEdit(item)}>
-          <Text style={commonStyles.buttonText}>Sửa</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[commonStyles.button, { paddingHorizontal: 12 }]} onPress={() => handleDelete(item.id)}>
-          <Text style={commonStyles.buttonText}>Xóa</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={commonStyles.container}>
@@ -180,6 +202,7 @@ export default function ShowtimeAdminScreen() {
         cinemaId={selectedCinema?.id}
         dateStr={dateStr}
         onSaved={() => { setModalVisible(false); loadShowtimes(); }}
+        lockedDateTime={!!editTarget?._locked}
       />
     </View>
   );
@@ -211,5 +234,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   showtimeText: { color: colors.textPrimary, fontSize: 14 },
+  showtimeMovie: { color: colors.accent, fontSize: 14, fontWeight: '600' },
   showtimeMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
 });

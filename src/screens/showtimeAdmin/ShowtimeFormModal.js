@@ -18,6 +18,7 @@ const errorMessages = {
     DUPLICATE_SHOWTIME: 'Suất chiếu trùng nhau (cùng phim/phòng/giờ bắt đầu).',
     CONFLICT_30_MIN: 'Suất chiếu xung đột (phải cách nhau tối thiểu 30 phút).',
     INTERNAL: 'Lỗi nội bộ. Vui lòng thử lại.',
+    PAST_START_TIME: 'Không thể tạo hoặc chỉnh sửa suất chiếu trong quá khứ.',
 };
 
 export default function ShowtimeFormModal({
@@ -28,6 +29,7 @@ export default function ShowtimeFormModal({
     cinemaId,
     dateStr,
     onSaved,
+    lockedDateTime = false, // true: cannot change date/time/movie/room if tickets purchased
 }) {
     const [movies, setMovies] = useState([]);
     const [rooms, setRooms] = useState([]);
@@ -97,8 +99,16 @@ export default function ShowtimeFormModal({
         return movies.filter(m => (m.title || '').toLowerCase().includes(key));
     }, [movies, searchMovie]);
 
+    const [overrideDateStr, setOverrideDateStr] = useState(() => dateStr || String(initial?.start_time).split(' ')[0]);
+
+    useEffect(() => {
+        if (mode === 'create') {
+            setOverrideDateStr(dateStr);
+        }
+    }, [dateStr, mode]);
+
     const buildStartTime = () => {
-        const safeDate = dateStr || String(initial?.start_time).split(' ')[0];
+        const safeDate = overrideDateStr || dateStr || String(initial?.start_time).split(' ')[0];
         const [hh, mm] = (timeHHmm || '').split(':');
         const HH = (parseInt(hh, 10) || 0).toString().padStart(2, '0');
         const MM = (parseInt(mm, 10) || 0).toString().padStart(2, '0');
@@ -110,8 +120,39 @@ export default function ShowtimeFormModal({
             Alert.alert('Thiếu thông tin', errorMessages.MISSING_FIELDS);
             return;
         }
+        if (mode === 'edit' && lockedDateTime) {
+            // For locked showtimes we prevent changes to start time fields by recomputing from original date/time (movie & room also locked)
+            // Ensure we keep original start_time's date/time if user attempted modification.
+            const originalStart = initial?.start_time;
+            if (originalStart) {
+                const [origDate, origTime] = String(originalStart).split(' ');
+                // Force HH:mm back if changed
+                const origHHmm = origTime?.slice(0,5);
+                if (timeHHmm !== origHHmm) setTimeHHmm(origHHmm);
+                setOverrideDateStr(origDate);
+            }
+        }
         const startTime = buildStartTime();
-        const priceNum = parseInt(basePrice, 10) || 0;
+        // Client-side validation: disallow past start time
+        try {
+            const [datePart, timePart] = startTime.split(' ');
+            const [y, m, d] = datePart.split('-').map(n => parseInt(n, 10));
+            const [hh, mm, ss] = timePart.split(':').map(n => parseInt(n, 10));
+            const dt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, ss || 0);
+            if (dt.getTime() < Date.now()) {
+                Alert.alert('Lỗi', errorMessages.PAST_START_TIME);
+                return;
+            }
+        } catch (e) {
+            Alert.alert('Lỗi', errorMessages.INVALID_MOVIE_OR_START_TIME);
+            return;
+        }
+        let priceNum = parseInt(basePrice, 10) || 0;
+        if (mode === 'edit' && lockedDateTime && initial?.base_price != null) {
+            // Force original price if locked
+            priceNum = parseInt(initial.base_price, 10) || priceNum;
+            if (String(basePrice) !== String(initial.base_price)) setBasePrice(String(initial.base_price));
+        }
 
         const doAlertConflict = (res, actionMsg) => {
             const msg = errorMessages[res.code] || actionMsg;
@@ -199,56 +240,90 @@ export default function ShowtimeFormModal({
                         <Text style={styles.title}>{mode === 'create' ? 'Tạo suất chiếu' : 'Cập nhật suất chiếu'}</Text>
 
                         {/* Movies */}
-                        <Text style={styles.sectionTitle}>Phim</Text>
-                        <TextInput
-                            value={searchMovie}
-                            onChangeText={setSearchMovie}
-                            placeholder="Tìm phim..."
-                            placeholderTextColor={colors.textTertiary}
-                            style={commonStyles.input}
-                        />
-                        <ScrollView style={styles.listContainer} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                            {filteredMovies.map((item) => (
-                                <View key={`movie-${item.id}`}>
-                                    {renderMovie({ item })}
-                                </View>
-                            ))}
-                        </ScrollView>
+                        <Text style={styles.sectionTitle}>Phim {lockedDateTime && mode==='edit' ? '(Đã có vé - khóa)' : ''}</Text>
+                        {lockedDateTime && mode==='edit' ? (
+                            <View style={styles.lockedBox}><Text style={styles.lockedText}>Không thể đổi phim vì suất chiếu đã có vé.</Text></View>
+                        ) : (
+                            <>
+                                <TextInput
+                                    value={searchMovie}
+                                    onChangeText={setSearchMovie}
+                                    placeholder="Tìm phim..."
+                                    placeholderTextColor={colors.textTertiary}
+                                    style={commonStyles.input}
+                                />
+                                <ScrollView style={styles.listContainer} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                                    {filteredMovies.map((item) => (
+                                        <View key={`movie-${item.id}`}>
+                                            {renderMovie({ item })}
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                            </>
+                        )}
 
                         {/* Rooms */}
-                        <Text style={styles.sectionTitle}>Phòng chiếu</Text>
-                        <ScrollView style={styles.listContainerSmall} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                            {rooms.map((item) => (
-                                <View key={`room-${item.id}`}>
-                                    {renderRoom({ item })}
-                                </View>
-                            ))}
-                        </ScrollView>
+                        <Text style={styles.sectionTitle}>Phòng chiếu {lockedDateTime && mode==='edit' ? '(Khóa)' : ''}</Text>
+                        {lockedDateTime && mode==='edit' ? (
+                            <View style={styles.lockedBox}><Text style={styles.lockedText}>Không thể đổi phòng vì đã có vé.</Text></View>
+                        ) : (
+                            <ScrollView style={styles.listContainerSmall} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                                {rooms.map((item) => (
+                                    <View key={`room-${item.id}`}>
+                                        {renderRoom({ item })}
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        )}
 
                         {/* Setup */}
                         <Text style={styles.sectionTitle}>Thiết lập</Text>
                         <View style={{ marginBottom: 8 }}>
                             <View style={styles.inputRow}>
                                 <View style={styles.inputBlock}>
-                                    <Text style={styles.label}>Giờ bắt đầu (HH:mm)</Text>
-                                    <TextInput
-                                        value={timeHHmm}
-                                        onChangeText={setTimeHHmm}
-                                        placeholder="18:00"
-                                        placeholderTextColor={colors.textTertiary}
-                                        style={commonStyles.input}
-                                    />
+                                    <Text style={styles.label}>Ngày (YYYY-MM-DD){lockedDateTime && mode==='edit' ? ' (Khóa)' : ''}</Text>
+                                    {lockedDateTime && mode==='edit' ? (
+                                        <View style={styles.lockedBox}><Text style={styles.lockedText}>{overrideDateStr}</Text></View>
+                                    ) : (
+                                        <TextInput
+                                            value={overrideDateStr}
+                                            onChangeText={setOverrideDateStr}
+                                            placeholder="2025-11-25"
+                                            placeholderTextColor={colors.textTertiary}
+                                            style={commonStyles.input}
+                                        />
+                                    )}
                                 </View>
                                 <View style={styles.inputBlock}>
-                                    <Text style={styles.label}>Giá vé (VND)</Text>
-                                    <TextInput
-                                        value={basePrice}
-                                        onChangeText={setBasePrice}
-                                        keyboardType="numeric"
-                                        placeholder="90000"
-                                        placeholderTextColor={colors.textTertiary}
-                                        style={commonStyles.input}
-                                    />
+                                    <Text style={styles.label}>Giờ bắt đầu (HH:mm){lockedDateTime && mode==='edit' ? ' (Khóa)' : ''}</Text>
+                                    {lockedDateTime && mode==='edit' ? (
+                                        <View style={styles.lockedBox}><Text style={styles.lockedText}>{timeHHmm}</Text></View>
+                                    ) : (
+                                        <TextInput
+                                            value={timeHHmm}
+                                            onChangeText={setTimeHHmm}
+                                            placeholder="18:00"
+                                            placeholderTextColor={colors.textTertiary}
+                                            style={commonStyles.input}
+                                        />
+                                    )}
+                                </View>
+                            </View>
+                            <View style={styles.inputRow}>
+                                <View style={styles.inputBlock}>
+                                    <Text style={styles.label}>Giá vé (VND){lockedDateTime && mode==='edit' ? ' (Khóa)' : ''}</Text>
+                                    {lockedDateTime && mode==='edit' ? (
+                                        <View style={styles.lockedBox}><Text style={styles.lockedText}>{Number(initial?.base_price).toLocaleString('vi-VN')} ₫</Text></View>
+                                    ) : (
+                                        <TextInput
+                                            value={basePrice}
+                                            onChangeText={setBasePrice}
+                                            keyboardType="numeric"
+                                            placeholder="90000"
+                                            placeholderTextColor={colors.textTertiary}
+                                            style={commonStyles.input}
+                                        />
+                                    )}
                                 </View>
                             </View>
                         </View>
@@ -276,7 +351,7 @@ export default function ShowtimeFormModal({
                             </View>
                             <View style={styles.previewLine}>
                                 <Text style={styles.previewLabel}>Bắt đầu:</Text>
-                                <Text style={styles.previewValue}>{previewStartTime}</Text>
+                                <Text style={styles.previewValue}>{previewStartTime}{lockedDateTime && mode==='edit' ? ' (khóa)' : ''}</Text>
                             </View>
                             <View style={styles.previewLine}>
                                 <Text style={styles.previewLabel}>Kết thúc dự kiến:</Text>
@@ -382,4 +457,6 @@ const styles = StyleSheet.create({
     previewValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
     statusTag: { backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
     actionBar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 },
+    lockedBox: { backgroundColor: colors.backgroundAlt, borderWidth: 1, borderColor: colors.border, padding: 12, borderRadius: 8 },
+    lockedText: { color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' },
 });

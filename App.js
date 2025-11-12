@@ -714,6 +714,7 @@ function AppNavigator() {
 export default function App() {
   // deleteAllMovies();
   // dropShowtimesTable();
+  seedDefaultShowtimes();
   // deleteTableCinemas();
   // seedCinemasCanTho();
   // deleteAllSeats();

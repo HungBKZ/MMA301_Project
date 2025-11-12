@@ -133,6 +133,18 @@ export const validateShowtimeInput = ({ movieId, roomId, startTime, basePrice, c
     if (Number(basePrice) <= 0) {
         return { ok: false, code: "INVALID_PRICE" };
     }
+    // Disallow creating / editing showtimes in the past
+    try {
+        const startDt = parseSqliteDateTime(startTime);
+        if (!startDt) return { ok: false, code: "INVALID_MOVIE_OR_START_TIME" };
+        const now = new Date();
+        if (startDt.getTime() < now.getTime()) {
+            return { ok: false, code: "PAST_START_TIME" };
+        }
+    } catch (e) {
+        // If parsing fails treat as invalid
+        return { ok: false, code: "INVALID_MOVIE_OR_START_TIME" };
+    }
     const endTime = calculateEndTimeForShow(movieId, startTime);
     if (!endTime) {
         return { ok: false, code: "INVALID_MOVIE_OR_START_TIME" };
