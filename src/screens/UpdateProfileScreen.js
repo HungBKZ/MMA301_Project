@@ -206,7 +206,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.primary} />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Cập nhật hồ sơ</Text>
+                        <Text style={styles.headerTitle}>Update Profile</Text>
                         <View style={{ width: 40 }} />
                     </View>
 
@@ -240,18 +240,18 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                 ) : (
                                     <View style={styles.avatarPlaceholder}>
                                         <Ionicons name="camera" size={32} color={colors.accent} />
-                                        <Text style={styles.avatarText}>Đổi ảnh</Text>
+                                        <Text style={styles.avatarText}>Change Photo</Text>
                                     </View>
                                 )}
                             </TouchableOpacity>
 
                             <View style={styles.profileInfoColumn}>
                                 <View style={styles.inputGroupSmall}>
-                                    <Text style={styles.inputLabel}>Họ tên</Text>
+                                    <Text style={styles.inputLabel}>Full Name</Text>
                                     <View style={styles.inputWrapperSmall}>
                                         <Ionicons name="person" size={18} color={colors.accent} style={styles.inputIcon} />
                                         <TextInput
-                                            placeholder="Nhập họ tên"
+                                            placeholder="Enter full name"
                                             value={name}
                                             onChangeText={setName}
                                             style={styles.inputFieldSmall}
@@ -279,11 +279,11 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
                     {/* ==================== CONTACT INFO SECTION ==================== */}
                     <View style={styles.formSection}>
-                        <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
+                        <Text style={styles.sectionTitle}>Contact Information</Text>
 
                         <View style={styles.rowContainer}>
                             <View style={[styles.inputGroup, styles.halfWidth]}>
-                                <Text style={styles.inputLabel}>Số điện thoại *</Text>
+                                <Text style={styles.inputLabel}>Phone Number *</Text>
                                 <View style={styles.inputWrapper}>
                                     <Ionicons name="call" size={18} color={colors.accent} style={styles.inputIcon} />
                                     <TextInput
@@ -298,7 +298,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                             </View>
 
                             <View style={[styles.inputGroup, styles.halfWidth]}>
-                                <Text style={styles.inputLabel}>Ngày sinh *</Text>
+                                <Text style={styles.inputLabel}>Date of Birth *</Text>
                                 <TouchableOpacity
                                     style={styles.inputWrapper}
                                     onPress={() => setShowDatePicker(true)}
@@ -329,7 +329,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
 
                         {/* Gender */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Giới tính *</Text>
+                            <Text style={styles.inputLabel}>Gender *</Text>
                             <View style={styles.pickerWrapper}>
                                 <Ionicons name="people" size={18} color={colors.accent} style={styles.inputIcon} />
                                 <Picker
@@ -338,32 +338,30 @@ export default function UpdateProfileScreen({ navigation, route }) {
                                     mode="dropdown"
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Chọn giới tính..." value="" />
-                                    <Picker.Item label="Nam" value="male" />
-                                    <Picker.Item label="Nữ" value="female" />
-                                    <Picker.Item label="Khác" value="other" />
+                                    <Picker.Item label="Select gender..." value="" />
+                                    <Picker.Item label="Male" value="male" />
+                                    <Picker.Item label="Female" value="female" />
+                                    <Picker.Item label="Other" value="other" />
                                 </Picker>
                             </View>
                         </View>
                     </View>
 
-                    {/* ==================== INFO CARD ==================== */}
                     <View style={styles.infoCard}>
                         <View style={styles.infoRow}>
                             <Ionicons name="shield-checkmark" size={18} color={colors.accent} />
                             <Text style={styles.infoText}>
-                                Các trường có dấu <Text style={{ color: colors.primary }}>*</Text> là bắt buộc
+                                Fields with marks <Text style={{ color: colors.primary }}>*</Text> are required
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
                             <Ionicons name="information-circle" size={18} color={colors.accent} />
                             <Text style={styles.infoText}>
-                                Email không thể thay đổi vì lý do bảo mật
+                                Email cannot be changed for security reasons
                             </Text>
                         </View>
                     </View>
 
-                    {/* ==================== ACTION BUTTONS ==================== */}
                     <TouchableOpacity
                         style={[styles.updateButton, loading && styles.buttonDisabled]}
                         onPress={onUpdate}
@@ -375,7 +373,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         ) : (
                             <>
                                 <Ionicons name="checkmark-done-circle" size={20} color="#FFFFFF" />
-                                <Text style={styles.updateButtonText}>Cập nhật hồ sơ</Text>
+                                <Text style={styles.updateButtonText}>Update Profile</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -386,7 +384,7 @@ export default function UpdateProfileScreen({ navigation, route }) {
                         activeOpacity={0.85}
                     >
                         <Ionicons name="arrow-back" size={18} color={colors.primary} />
-                        <Text style={styles.cancelButtonText}>Quay lại</Text>
+                        <Text style={styles.cancelButtonText}>Go Back</Text>
                     </TouchableOpacity>
 
                     <View style={{ height: 30 }} />

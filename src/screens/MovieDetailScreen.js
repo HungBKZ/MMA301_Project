@@ -467,8 +467,8 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 <Ionicons name="ticket" size={28} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ticketTitle}>🎬 Phim Đang Chiếu</Text>
-                <Text style={styles.ticketSubtitle}>Đặt vé ngay để không bỏ lỡ!</Text>
+                <Text style={styles.ticketTitle}>🎬 Movie Now Showing</Text>
+                <Text style={styles.ticketSubtitle}>Book your tickets now!</Text>
               </View>
             </View>
 
@@ -481,8 +481,8 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 <View style={styles.bookButtonContent}>
                   <Ionicons name="calendar" size={24} color="#FFFFFF" />
                   <View style={{ marginLeft: 12, flex: 1 }}>
-                    <Text style={styles.bookButtonMainText}>Chọn Suất Chiếu</Text>
-                    <Text style={styles.bookButtonSubText}>Đặt vé ngay</Text>
+                    <Text style={styles.bookButtonMainText}>Choose Show Time</Text>
+                    <Text style={styles.bookButtonSubText}>Book your tickets now!</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={24} color="#FFFFFF" />
                 </View>
@@ -494,7 +494,7 @@ const MovieDetailScreen = ({ route, navigation }) => {
                 activeOpacity={0.85}
               >
                 <Ionicons name="location" size={22} color={colors.primary} />
-                <Text style={styles.findCinemaText}>Tìm Rạp Gần Bạn</Text>
+                <Text style={styles.findCinemaText}>Find Nearby Cinemas</Text>
               </TouchableOpacity>
             </View>
           </View>

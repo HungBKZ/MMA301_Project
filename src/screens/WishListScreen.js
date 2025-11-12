@@ -207,7 +207,7 @@ export default function WishListScreen({ navigation }) {
                     <View style={styles.header}>
                         <View style={styles.headerContent}>
                             <View>
-                                <Text style={styles.headerGreeting}>Danh sách yêu thích</Text>
+                                <Text style={styles.headerGreeting}>My Wishlist</Text>
                             </View>
                         </View>
                         <View style={styles.countBadge}>
