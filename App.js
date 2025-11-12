@@ -47,12 +47,13 @@ import CheckoutScreen from "./src/payment/CheckoutScreen";
 import { colors } from "./src/styles/commonStyles";
 import WishListScreen from "./src/screens/WishListScreen";
 import { dropShowtimesTable, seedDefaultShowtimes } from "./src/database/showtimeDB";
-import { deleteAllMovies, deleteTableCinemas, resetAndSeedCinemas, seedCinemasCanTho } from "./src/database/db";
+import { deleteAllMovies, deleteReview, deleteReviewsTable, deleteTableCinemas, resetAndSeedCinemas, seedCinemasCanTho } from "./src/database/db";
 import ReviewListScreen from "./src/screens/ReviewListScreen";
 import { deleteAllSeats, generateDefaultSeats, seedDefaultSeats, seedSeats } from "./src/database/seatDB";
 import TicketScreen from "./src/screens/TicketScreen";
 import TicketDetailScreen from "./src/screens/TicketDetailScreen";
 import QRScannerScreen from "./src/screens/QRScannerScreen";
+import ShowtimeAdminScreen from "./src/screens/showtimeAdmin/ShowtimeAdminScreen";
 
 // 🔧 Tạo navigators
 const Tab = createBottomTabNavigator();
@@ -669,6 +670,11 @@ function AppNavigator() {
         {() => (user.role === "admin" ? <AdminTabs /> : <UserTabs />)}
       </Stack.Screen>
       <Stack.Screen
+        name="ShowtimeAdmin"
+        component={ShowtimeAdminScreen}
+        options={{ title: "Quản lý Suất chiếu", headerShown: true }}
+      />
+      <Stack.Screen
         name="Tickets"
         component={TicketScreen}
         options={{ title: 'Vé của tôi', headerShown: true }}
@@ -706,6 +712,7 @@ export default function App() {
   // deleteTableCinemas();
   // seedCinemasCanTho();
   // deleteAllSeats();
+  // deleteReviewsTable();
   seedDefaultSeats();
   return (
     <AuthProvider>

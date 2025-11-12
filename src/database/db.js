@@ -168,6 +168,15 @@ export const initDatabase = () => {
   }
 };
 
+export const deleteReviewsTable = () => {
+  try {
+    db.execSync("DROP TABLE IF EXISTS reviews");
+    console.log("✅ Reviews table deleted");
+  } catch (error) {
+    console.error("❌ Error deleting reviews table:", error);
+  }
+};
+
 // ============================================
 // DATABASE MIGRATION
 // ============================================

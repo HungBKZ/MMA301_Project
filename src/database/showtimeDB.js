@@ -36,6 +36,181 @@ export const initShowtimesTable = () => {
     }
 };
 
+// =============================
+// Utilities: time and validation
+// =============================
+
+// Parse 'YYYY-MM-DD HH:mm:ss' to a JS Date in local time
+const parseSqliteDateTime = (str) => {
+    if (!str || typeof str !== 'string') return null;
+    const [datePart, timePart] = str.split(' ');
+    if (!datePart || !timePart) return null;
+    const [y, m, d] = datePart.split('-').map((v) => parseInt(v, 10));
+    const [hh, mm, ss] = timePart.split(':').map((v) => parseInt(v, 10));
+    return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, ss || 0, 0);
+};
+
+// Format JS Date to 'YYYY-MM-DD HH:mm:ss'
+const formatSqliteDateTime = (date) => {
+    const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
+    const y = date.getFullYear();
+    const m = pad(date.getMonth() + 1);
+    const d = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+    const ss = pad(date.getSeconds());
+    return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+};
+
+// Get movie duration + 20 minute buffer (in minutes)
+export const getBufferedMovieDurationMinutes = (movieId) => {
+    try {
+        const row = db.getFirstSync("SELECT duration_minutes FROM movies WHERE id = ?", [movieId]);
+        const base = row?.duration_minutes ? Number(row.duration_minutes) : null;
+        if (!base || isNaN(base) || base <= 0) return null;
+        return base + 20; // add 20 minutes buffer
+    } catch (e) {
+        console.error("❌ Error getBufferedMovieDurationMinutes:", e);
+        return null;
+    }
+};
+
+// Calculate end_time string from movieId and start_time string
+export const calculateEndTimeForShow = (movieId, startTime) => {
+    const dur = getBufferedMovieDurationMinutes(movieId);
+    if (dur == null) return null;
+    const start = parseSqliteDateTime(startTime);
+    if (!start) return null;
+    const end = new Date(start.getTime() + dur * 60 * 1000);
+    return formatSqliteDateTime(end);
+};
+
+// Verify room belongs to cinema (if cinemaId provided)
+export const validateRoomCinema = (roomId, cinemaId) => {
+    try {
+        if (!cinemaId) return { ok: true };
+        const room = db.getFirstSync("SELECT cinema_id FROM rooms WHERE id = ?", [roomId]);
+        if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
+        if (Number(room.cinema_id) !== Number(cinemaId)) return { ok: false, reason: "ROOM_NOT_IN_CINEMA" };
+        return { ok: true };
+    } catch (e) {
+        console.error("❌ Error validateRoomCinema:", e);
+        return { ok: false, reason: "INTERNAL" };
+    }
+};
+
+// Check time conflicts within the same room with required 30-minute gap
+// Returns conflicting rows if any
+export const findShowtimeConflicts = (roomId, startTime, endTime, excludeId = null) => {
+    try {
+        const start = parseSqliteDateTime(startTime);
+        const end = parseSqliteDateTime(endTime);
+        if (!start || !end) return [];
+        // Apply 30 minute gap window
+        const startMinus = formatSqliteDateTime(new Date(start.getTime() - 30 * 60 * 1000));
+        const endPlus = formatSqliteDateTime(new Date(end.getTime() + 30 * 60 * 1000));
+
+        // Conflict when: existing.start_time < proposed_end_plus AND existing.end_time > proposed_start_minus
+        const params = [roomId, endPlus, startMinus];
+        let sql = `SELECT * FROM showtimes WHERE room_id = ? AND start_time < ? AND end_time > ?`;
+        if (excludeId != null) {
+            sql += ` AND id != ?`;
+            params.push(excludeId);
+        }
+        const rows = db.getAllSync(sql, params);
+        return rows || [];
+    } catch (e) {
+        console.error("❌ Error findShowtimeConflicts:", e);
+        return [{ id: -1, error: true }];
+    }
+};
+
+// High-level validator: compute end_time and validate constraints
+export const validateShowtimeInput = ({ movieId, roomId, startTime, basePrice, cinemaId = null, excludeId = null }) => {
+    if (!movieId || !roomId || !startTime || !basePrice) {
+        return { ok: false, code: "MISSING_FIELDS" };
+    }
+    if (Number(basePrice) <= 0) {
+        return { ok: false, code: "INVALID_PRICE" };
+    }
+    const endTime = calculateEndTimeForShow(movieId, startTime);
+    if (!endTime) {
+        return { ok: false, code: "INVALID_MOVIE_OR_START_TIME" };
+    }
+    // Check room exists and (optionally) belongs to cinema
+    const room = db.getFirstSync("SELECT id, cinema_id, is_active FROM rooms WHERE id = ?", [roomId]);
+    if (!room) return { ok: false, code: "ROOM_NOT_FOUND" };
+    if (room.is_active === 0) return { ok: false, code: "ROOM_INACTIVE" };
+    const roomCinemaCheck = validateRoomCinema(roomId, cinemaId);
+    if (!roomCinemaCheck.ok) return { ok: false, code: roomCinemaCheck.reason };
+
+    // Check duplicate unique combo early
+    try {
+        const dup = db.getFirstSync(
+            "SELECT * FROM showtimes WHERE movie_id = ? AND room_id = ? AND start_time = ?" + (excludeId ? " AND id != ?" : ""),
+            excludeId ? [movieId, roomId, startTime, excludeId] : [movieId, roomId, startTime]
+        );
+        if (dup) {
+            // Also propose a suggestion past the conflicting end_time + 30 minutes
+            const suggest = suggestNextAvailableStartTime(roomId, movieId, startTime, excludeId);
+            return { ok: false, code: "DUPLICATE_SHOWTIME", conflicts: [dup], suggestion: suggest };
+        }
+    } catch (e) {
+        // ignore
+    }
+
+    // Check conflicts with 30-minute gap
+    const conflicts = findShowtimeConflicts(roomId, startTime, endTime, excludeId);
+    if (Array.isArray(conflicts) && conflicts.length > 0) {
+        // If the array contains a marker error object, treat as internal error
+        const hasMarker = conflicts.some((c) => c && c.error);
+        if (hasMarker) return { ok: false, code: "INTERNAL" };
+        const suggestion = suggestNextAvailableStartTime(roomId, movieId, startTime, excludeId);
+        return { ok: false, code: "CONFLICT_30_MIN", conflicts, suggestion };
+    }
+
+    return { ok: true, endTime };
+};
+
+// Compute the next available start_time that satisfies 30-min gap in the given room for the given movie duration.
+// It iteratively advances to the end of the latest conflicting show + 30 minutes until no conflicts remain.
+export const suggestNextAvailableStartTime = (roomId, movieId, startTime, excludeId = null) => {
+    try {
+        const dur = getBufferedMovieDurationMinutes(movieId);
+        if (dur == null) return null;
+        let candidate = parseSqliteDateTime(startTime);
+        if (!candidate) return null;
+
+        // Safety cap to prevent infinite loop
+        const maxIterations = 20;
+        let i = 0;
+        while (i < maxIterations) {
+            const candStart = formatSqliteDateTime(candidate);
+            const candEnd = formatSqliteDateTime(new Date(candidate.getTime() + dur * 60 * 1000));
+            const conflicts = findShowtimeConflicts(roomId, candStart, candEnd, excludeId);
+            if (!Array.isArray(conflicts) || conflicts.length === 0) {
+                return candStart;
+            }
+            // Move candidate to the latest (end_time + 30m) among the conflicts
+            let latest = candidate;
+            conflicts.forEach((c) => {
+                if (c && c.end_time) {
+                    const end = parseSqliteDateTime(String(c.end_time));
+                    if (end && end.getTime() > latest.getTime()) {
+                        latest = end;
+                    }
+                }
+            });
+            candidate = new Date(latest.getTime() + 30 * 60 * 1000);
+            i += 1;
+        }
+        // Fallback: return original proposed time if too many iterations
+        return startTime;
+    } catch (e) {
+        return null;
+    }
+};
+
 // CRUD functions for showtimes
 export const getAllShowtimes = () => {
     try {
@@ -73,6 +248,44 @@ export const getShowtimesByRoomId = (roomId) => {
     }
 };
 
+// Convenience: list showtimes for a given cinema (via rooms)
+export const getShowtimesByCinemaId = (cinemaId) => {
+    try {
+        return db.getAllSync(
+            `SELECT s.* FROM showtimes s
+             JOIN rooms r ON r.id = s.room_id
+             WHERE r.cinema_id = ?
+             ORDER BY s.start_time ASC`,
+            [cinemaId]
+        );
+    } catch (error) {
+        console.error("❌ Error getShowtimesByCinemaId:", error);
+        return [];
+    }
+};
+
+// Convenience: list showtimes by date (YYYY-MM-DD), optional cinema filter
+export const getShowtimesByDate = (dateStr, cinemaId = null) => {
+    try {
+        if (cinemaId) {
+            return db.getAllSync(
+                `SELECT s.* FROM showtimes s
+                 JOIN rooms r ON r.id = s.room_id
+                 WHERE DATE(s.start_time) = ? AND r.cinema_id = ?
+                 ORDER BY s.start_time ASC`,
+                [dateStr, cinemaId]
+            );
+        }
+        return db.getAllSync(
+            `SELECT * FROM showtimes WHERE DATE(start_time) = ? ORDER BY start_time ASC`,
+            [dateStr]
+        );
+    } catch (error) {
+        console.error("❌ Error getShowtimesByDate:", error);
+        return [];
+    }
+};
+
 export const addShowtime = (movieId, roomId, startTime, endTime, basePrice, status = 'SCHEDULED') => {
     try {
         const res = db.runSync(
@@ -99,6 +312,26 @@ export const updateShowtime = (id, { movie_id, room_id, start_time, end_time, ba
     }
 };
 
+// High-level: update showtime with validations and auto end_time
+export const updateShowtimeWithValidation = (id, { movieId, roomId, cinemaId = null, startTime, basePrice, status = 'SCHEDULED' }) => {
+    try {
+        const check = validateShowtimeInput({ movieId, roomId, startTime, basePrice, cinemaId, excludeId: id });
+        if (!check.ok) return { success: false, code: check.code, conflicts: check.conflicts };
+        const res = updateShowtime(id, {
+            movie_id: movieId,
+            room_id: roomId,
+            start_time: startTime,
+            end_time: check.endTime,
+            base_price: basePrice,
+            status,
+        });
+        return res;
+    } catch (e) {
+        console.error("❌ Error updateShowtimeWithValidation:", e);
+        return { success: false, error: e };
+    }
+};
+
 export const deleteShowtime = (id) => {
     try {
         const res = db.runSync("DELETE FROM showtimes WHERE id = ?", [id]);
@@ -117,6 +350,19 @@ export const getShowtimesCount = () => {
     } catch (error) {
         console.error("❌ Error getShowtimesCount:", error);
         return 0;
+    }
+};
+
+// High-level: create showtime with validations and auto end_time
+export const createShowtimeWithValidation = ({ movieId, roomId, cinemaId = null, startTime, basePrice, status = 'SCHEDULED' }) => {
+    try {
+        const check = validateShowtimeInput({ movieId, roomId, startTime, basePrice, cinemaId });
+        if (!check.ok) return { success: false, code: check.code, conflicts: check.conflicts };
+        const res = addShowtime(movieId, roomId, startTime, check.endTime, basePrice, status);
+        return res;
+    } catch (e) {
+        console.error("❌ Error createShowtimeWithValidation:", e);
+        return { success: false, error: e };
     }
 };
 
@@ -484,12 +730,22 @@ export const dropShowtimesTable = () => {
 
 export default {
     initShowtimesTable,
+    getBufferedMovieDurationMinutes,
+    calculateEndTimeForShow,
+    validateRoomCinema,
+    findShowtimeConflicts,
+    validateShowtimeInput,
+    suggestNextAvailableStartTime,
     getAllShowtimes,
     getShowtimeById,
     getShowtimesByMovieId,
     getShowtimesByRoomId,
+    getShowtimesByCinemaId,
+    getShowtimesByDate,
     addShowtime,
+    createShowtimeWithValidation,
     updateShowtime,
+    updateShowtimeWithValidation,
     deleteShowtime,
     seedShowtimes,
     getShowtimesCount,

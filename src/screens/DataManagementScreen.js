@@ -14,6 +14,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { exportMoviesData, importMoviesData } from "../database/db";
+import { useNavigation } from '@react-navigation/native';
 import { colors, commonStyles } from "../styles/commonStyles";
 
 /**
@@ -22,6 +23,7 @@ import { colors, commonStyles } from "../styles/commonStyles";
  */
 const DataManagementScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const navigation = useNavigation();
 
   /** Xuất dữ liệu ra file JSON */
   const handleExportData = async () => {
@@ -303,6 +305,23 @@ const DataManagementScreen = () => {
           >
             <Ionicons name="document" size={20} color="#FFFFFF" />
             <Text style={styles.buttonText}>Download Template</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Showtime admin navigation */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="film" size={24} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Showtime Management</Text>
+          </View>
+          <Text style={styles.sectionDescription}>Create, edit và kiểm tra xung đột suất chiếu theo rạp/phòng/ngày.</Text>
+          <TouchableOpacity
+            style={[styles.button, styles.exportButton]}
+            onPress={() => navigation.navigate('ShowtimeAdmin')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="time" size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Go to Showtime Admin</Text>
           </TouchableOpacity>
         </View>
 
