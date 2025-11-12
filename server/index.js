@@ -238,24 +238,24 @@ app.get('/payment/vnpay/return', (req, res) => {
 
 // VNPay return for WebView flow: postMessage back to RN instead of deep-linking
 app.get('/payment/vnpay/return-webview', (req, res) => {
-        const params = req.query;
-        const secureHash = params['vnp_SecureHash'];
-        const encBuilt = buildSignatureAndQueryEncoded(params, { includeType: false });
-        const isValid = !!secureHash && secureHash.toLowerCase() === encBuilt.secureHash.toLowerCase();
-        const success = params['vnp_ResponseCode'] === '00' && isValid;
-        const txnRef = params['vnp_TxnRef'] || '';
+    const params = req.query;
+    const secureHash = params['vnp_SecureHash'];
+    const encBuilt = buildSignatureAndQueryEncoded(params, { includeType: false });
+    const isValid = !!secureHash && secureHash.toLowerCase() === encBuilt.secureHash.toLowerCase();
+    const success = params['vnp_ResponseCode'] === '00' && isValid;
+    const txnRef = params['vnp_TxnRef'] || '';
 
-        const payload = {
-                success: success ? 1 : 0,
-                code: params['vnp_ResponseCode'] || '',
-                txnRef,
-                orderId: (typeof txnRef === 'string' ? txnRef.split('-')[0] : ''),
-        };
+    const payload = {
+        success: success ? 1 : 0,
+        code: params['vnp_ResponseCode'] || '',
+        txnRef,
+        orderId: (typeof txnRef === 'string' ? txnRef.split('-')[0] : ''),
+    };
 
-        const json = JSON.stringify(payload).replace(/</g, '\u003c');
+    const json = JSON.stringify(payload).replace(/</g, '\u003c');
 
-        res.set('Content-Type', 'text/html; charset=utf-8');
-        res.send(`<!doctype html>
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html>
     <html>
         <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" />
             <title>VNPay Return</title>
@@ -286,6 +286,92 @@ app.get('/payment/vnpay/ipn', (req, res) => {
 
 app.get('/', (_req, res) => {
     res.json({ ok: true, name: 'MMA301 VNPay server', returnUrl: VNP_RETURN_URL });
+});
+
+// Simple ticket view page so external QR scanners can open a human-readable page.
+// Supports two forms:
+// 1) /ticket/view?text=TICKET|code=...|id=...|seat=...|movie=...|time=...
+// 2) /ticket/:code -> shows the code only (fallback if only code is available)
+app.get('/ticket/view', (req, res) => {
+    const text = String(req.query.text || '').trim();
+    // Parse pipe-delimited ticket payload produced by the mobile app.
+    // Format now supports: code,id,seat,movie,time,cinema,cinemaAddr,room,price,status
+    const fields = {
+        code: '', id: '', seat: '', movie: '', time: '', cinema: '', cinemaAddr: '', room: '', price: '', status: ''
+    };
+    if (text.startsWith('TICKET|')) {
+        Object.keys(fields).forEach(k => {
+            const m = text.match(new RegExp(`(?:^|\\|)${k}=([^|]+)`));
+            if (m) fields[k] = m[1];
+        });
+    }
+    // Basic formatting helpers
+    const esc = (s) => String(s).replace(/[&<>\"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    const priceFormatted = fields.price ? (() => {
+        const n = Number(fields.price);
+        return Number.isFinite(n) ? n.toLocaleString('vi-VN') + 'đ' : esc(fields.price);
+    })() : '';
+
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thông tin vé</title>
+  <style>
+    :root{color-scheme:light dark}
+    body{font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; padding:16px; background:#f5f7fa;}
+    .card{max-width:680px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);padding:22px;}
+    @media (prefers-color-scheme: dark){body{background:#0e1114} .card{background:#1b1f24; box-shadow:0 4px 18px rgba(0,0,0,.45);} .p{color:#eee} .muted{color:#999}}
+    h1{font-size:22px;font-weight:700;margin:0 0 14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:4px}
+    .item{background:#fafafa;border:1px solid #e2e8f0;padding:12px;border-radius:10px}
+    @media (prefers-color-scheme: dark){.item{background:#222a33;border-color:#2e3a46}}
+    .label{font-size:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:#555;margin:0 0 6px}
+    .value{margin:0;font-size:15px;word-break:break-word}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:14px}
+    .muted{color:#666;font-size:13px;margin-top:18px}
+    footer{margin-top:28px;font-size:11px;color:#888;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Thông tin vé</h1>
+    ${!text ? '<p class="muted">Không có dữ liệu vé. Vui lòng quét lại từ ứng dụng.</p>' : ''}
+    <div class="grid">
+    ${fields.movie ? `<div class="item"><p class="label">Phim</p><p class="value">${esc(fields.movie)}</p></div>` : ''}
+    ${fields.time ? `<div class="item"><p class="label">Suất chiếu</p><p class="value">${esc(fields.time)}</p></div>` : ''}
+    ${fields.cinema ? `<div class="item"><p class="label">Rạp</p><p class="value">${esc(fields.cinema)}${fields.cinemaAddr?'<br/><small>'+esc(fields.cinemaAddr)+'</small>':''}</p></div>` : ''}
+    ${fields.room ? `<div class="item"><p class="label">Phòng</p><p class="value">${esc(fields.room)}</p></div>` : ''}
+    ${fields.seat ? `<div class="item"><p class="label">Ghế</p><p class="value">${esc(fields.seat)}</p></div>` : ''}
+      ${priceFormatted ? `<div class="item"><p class="label">Giá</p><p class="value">${priceFormatted}</p></div>` : ''}
+    ${fields.status ? `<div class="item"><p class="label">Trạng thái</p><p class="value">${esc(fields.status)}</p></div>` : ''}
+    ${fields.id ? `<div class="item"><p class="label">ID Vé</p><p class="value code">${esc(fields.id)}</p></div>` : ''}
+    ${fields.code ? `<div class="item"><p class="label">Mã QR</p><p class="value code">${esc(fields.code)}</p></div>` : ''}
+    </div>
+    <p class="muted">Trang web này hiển thị thông tin đã mã hóa trong QR. Để kiểm tra tính hợp lệ / cập nhật trạng thái mới nhất, hãy mở vé trong ứng dụng.</p>
+    <footer>© ${new Date().getFullYear()} MMA301 MovieApp</footer>
+  </div>
+</body>
+</html>`);
+});
+
+app.get('/ticket/:code', (req, res) => {
+    const code = String(req.params.code || '');
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(`<!doctype html>
+<html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mã vé</title>
+<style>body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; padding:16px;} .card{max-width:640px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:16px} .code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;}</style>
+</head>
+<body>
+    <div class="card">
+        <h2>Mã vé</h2>
+        <p>QR Code: <span class="code">${code}</span></p>
+        <p style="color:#666">Để xem chi tiết và xác thực, vui lòng mở ứng dụng trên máy quét nội bộ.</p>
+    </div>
+</body></html>`);
 });
 
 app.listen(PORT, '0.0.0.0', () => {

@@ -256,7 +256,13 @@ export default function CheckoutScreen({ route, navigation }) {
 
             setIsPaid(true);
             Alert.alert('Thành công', 'Thanh toán thành công. Vé đã được xác nhận.');
-            navigation.popToTop();
+            // Navigate to Tickets screen so user can view their confirmed tickets
+            try {
+                navigation.navigate('Tickets');
+            } catch (e) {
+                // fallback to pop to top if navigate fails
+                navigation.popToTop();
+            }
         } catch (e) {
             console.error('Confirm error:', e);
             setError(e.message || 'Không thể hoàn tất thanh toán');
