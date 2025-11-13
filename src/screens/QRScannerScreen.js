@@ -8,6 +8,7 @@ import {
     Alert,
     TextInput,
 } from 'react-native';
+import { Linking } from 'react-native';
 import { colors, commonStyles } from '../styles/commonStyles';
 import { getAllTickets } from '../database/ticketDB';
 import { getAllBookings, getBookingById } from '../database/bookingDB';
@@ -112,6 +113,19 @@ export default function QRScannerScreen({ navigation }) {
                     navigation.replace('Tickets', { bookingId: booking.id });
                     return;
                 }
+                // If the scanned data is an URL to backend booking view, offer to open it
+                if (/^https?:\/\//i.test(String(data))) {
+                    Alert.alert(
+                        'QR Booking',
+                        'Không tìm thấy booking PAID hợp lệ trong dữ liệu cục bộ. Mở trang chi tiết trên server?',
+                        [
+                            { text: 'Huỷ', style: 'cancel', onPress: () => setTimeout(() => setScanning(true), 1600) },
+                            { text: 'Mở trang', onPress: async () => { try { await Linking.openURL(String(data)); } catch (_) {} } },
+                        ],
+                        { cancelable: true }
+                    );
+                    return;
+                }
                 Alert.alert('QR Booking', 'Không tìm thấy booking PAID hợp lệ.');
                 setTimeout(() => setScanning(true), 1600);
                 return;
@@ -122,6 +136,18 @@ export default function QRScannerScreen({ navigation }) {
             if (foundRow) {
                 const detailed = buildTicketDetails(foundRow);
                 navigation.replace('TicketDetail', { ticket: detailed });
+                return;
+            }
+            if (/^https?:\/\//i.test(String(data))) {
+                Alert.alert(
+                    'QR Quét',
+                    'Không tìm thấy vé tương ứng trong dữ liệu cục bộ. Mở đường dẫn trên trình duyệt?',
+                    [
+                        { text: 'Huỷ', style: 'cancel', onPress: () => setTimeout(() => setScanning(true), 1800) },
+                        { text: 'Mở trang', onPress: async () => { try { await Linking.openURL(String(data)); } catch (_) {} } },
+                    ],
+                    { cancelable: true }
+                );
                 return;
             }
             Alert.alert('QR Quét', `Không khớp mã hợp lệ.\nNội dung quét: ${data}`);
@@ -170,6 +196,16 @@ export default function QRScannerScreen({ navigation }) {
                                 if (booking && String(booking.status).toUpperCase() === 'PAID') {
                                     return navigation.replace('Tickets', { bookingId: booking.id });
                                 }
+                                if (/^https?:\/\//i.test(String(data))) {
+                                    return Alert.alert(
+                                        'QR Booking',
+                                        'Không tìm thấy booking PAID hợp lệ trong dữ liệu cục bộ. Mở trang chi tiết trên server?',
+                                        [
+                                            { text: 'Huỷ', style: 'cancel' },
+                                            { text: 'Mở trang', onPress: async () => { try { await Linking.openURL(String(data)); } catch (_) {} } },
+                                        ]
+                                    );
+                                }
                                 return Alert.alert('Không tìm thấy booking PAID hợp lệ');
                             }
                             const allT = getAllTickets() || [];
@@ -177,6 +213,16 @@ export default function QRScannerScreen({ navigation }) {
                             if (foundRow) {
                                 const detailed = buildTicketDetails(foundRow);
                                 return navigation.replace('TicketDetail', { ticket: detailed });
+                            }
+                            if (/^https?:\/\//i.test(String(data))) {
+                                return Alert.alert(
+                                    'QR Quét',
+                                    'Không tìm thấy vé tương ứng trong dữ liệu cục bộ. Mở đường dẫn trên trình duyệt?',
+                                    [
+                                        { text: 'Huỷ', style: 'cancel' },
+                                        { text: 'Mở trang', onPress: async () => { try { await Linking.openURL(String(data)); } catch (_) {} } },
+                                    ]
+                                );
                             }
                             return Alert.alert('Không tìm thấy vé hoặc booking với mã này');
                         }}

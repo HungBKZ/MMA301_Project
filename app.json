@@ -44,7 +44,7 @@
     ],
     "extra": {
       "GEMINI_API_KEY": "AIzaSyAQTNX-2wlKmUMAFCbQBnssfLZM90HhjvA",
-      "API_BASE": "http://10.10.100.40:3001"
+      "API_BASE": "http://10.66.178.72:3001"
     }
   }
 }
